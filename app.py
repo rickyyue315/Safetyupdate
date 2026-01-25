@@ -483,18 +483,20 @@ def display_download_buttons(results_df: 'pd.DataFrame'):
         st.error(f"❌ 生成下載檔案時發生錯誤：{str(e)}")
 
 
-def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings') -> 'pd.DataFrame':
+def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets: dict = None) -> 'pd.DataFrame':
     """
     對資料執行安全庫存計算
     
     參數:
         df: 輸入資料 DataFrame
         settings: 系統設定
+        sku_targets: SKU 目標數量字典 {sku: target_qty}
         
     返回:
         包含計算結果的 DataFrame
     """
     import pandas as pd
+    import math
     from core.calculator import SafetyStockCalculator
     from core.data_processor import DataProcessor
     
@@ -530,6 +532,79 @@ def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings') -> 'pd.Data
     # 轉換為 DataFrame
     results_df = pd.DataFrame(results)
     
+    # 如果有 SKU 目標數量，執行分配邏輯
+    if sku_targets and len(results_df) > 0:
+        # 確保 Article 欄位類型一致
+        results_df['Article'] = results_df['Article'].astype(str)
+        
+        for sku, target_qty in sku_targets.items():
+            if target_qty <= 0:
+                continue
+                
+            sku = str(sku)
+            # 篩選該 SKU 的所有記錄
+            sku_mask = results_df['Article'] == sku
+            sku_records = results_df[sku_mask]
+            
+            if len(sku_records) == 0:
+                continue
+                
+            # 計算該 SKU 目前的總安全庫存 (基於標準計算)
+            current_total_ss = sku_records['Suggested_Safety_Stock'].sum()
+            
+            if current_total_ss > 0:
+                # 計算分配比例並更新
+                # 使用 floor 確保不超過 target，最後再分配餘數
+                
+                # 1. 計算分配係數
+                factor = target_qty / current_total_ss
+                
+                # 2. 初步分配 (向下取整)
+                allocated_ss = (sku_records['Suggested_Safety_Stock'] * factor).apply(math.floor)
+                
+                # 3. 計算餘數
+                current_allocated_sum = allocated_ss.sum()
+                remainder = int(target_qty - current_allocated_sum)
+                
+                # 4. 分配餘數 (分配給計算後數值小數部分最大的店舖)
+                if remainder > 0:
+                    # 計算小數部分
+                    fractional_parts = (sku_records['Suggested_Safety_Stock'] * factor) - allocated_ss
+                    # 排序並取前 remainder 個店舖的 index
+                    top_indices = fractional_parts.sort_values(ascending=False).head(remainder).index
+                    # 加 1
+                    allocated_ss.loc[top_indices] += 1
+                
+                # 5. 更新 DataFrame
+                results_df.loc[sku_mask, 'Suggested_Safety_Stock'] = allocated_ss
+                results_df.loc[sku_mask, 'Constraint_Applied'] = 'Target Allocation'
+                results_df.loc[sku_mask, 'Calculation_Mode'] = 'Allocation'
+                
+                # 6. 更新 Notes 和其他相關欄位
+                for idx in sku_mask[sku_mask].index:
+                    original_ss = sku_records.loc[idx, 'Suggested_Safety_Stock'] # 這是標準計算的 SS
+                    new_ss = results_df.loc[idx, 'Suggested_Safety_Stock']
+                    avg_daily_sales = results_df.loc[idx, 'Avg_Daily_Sales']
+                    
+                    # 更新支撐天數
+                    if avg_daily_sales > 0:
+                        new_days = round(new_ss / avg_daily_sales, 2)
+                    else:
+                        new_days = 0
+                    results_df.loc[idx, 'Suggested_SS_Days'] = new_days
+                    results_df.loc[idx, 'Safety_Stock_Days'] = new_days
+                    
+                    # 更新 Notes
+                    old_notes = results_df.loc[idx, 'Notes']
+                    allocation_note = (
+                        f"\n\n--- Target Allocation ---\n"
+                        f"Target Qty: {target_qty}\n"
+                        f"Original Total SS: {current_total_ss}\n"
+                        f"Allocation Factor: {factor:.4f}\n"
+                        f"Allocated SS: {new_ss}"
+                    )
+                    results_df.loc[idx, 'Notes'] = old_notes + allocation_note
+
     return results_df
 
 
@@ -571,10 +646,48 @@ def main():
             with st.expander("📋 查看原始資料"):
                 st.dataframe(df, use_container_width=True)
             
+            st.markdown("---")
+            
+            # SKU Target Qty Allocation Section
+            st.subheader("🎯 SKU 目標數量分配 (Target Allocation)")
+            st.info("在此輸入 SKU 的總目標數量，系統將自動按比例分配至各店舖。若輸入 0 則使用標準計算公式。")
+            
+            # 準備 SKU 編輯表格
+            unique_skus = sorted(df['Article'].unique().astype(str))
+            sku_target_data = [{"SKU": sku, "Target Qty": 0} for sku in unique_skus]
+            sku_target_df = pd.DataFrame(sku_target_data)
+            
+            # 顯示編輯器
+            edited_sku_df = st.data_editor(
+                sku_target_df,
+                column_config={
+                    "SKU": st.column_config.TextColumn("SKU (Article)", disabled=True),
+                    "Target Qty": st.column_config.NumberColumn(
+                        "Target Qty",
+                        min_value=0,
+                        step=1,
+                        format="%d",
+                        help="輸入該 SKU 的總目標數量"
+                    )
+                },
+                use_container_width=True,
+                hide_index=True,
+                key="sku_target_editor"
+            )
+            
+            # 轉換為字典
+            sku_targets = {}
+            if edited_sku_df is not None:
+                for _, row in edited_sku_df.iterrows():
+                    if row['Target Qty'] > 0:
+                        sku_targets[str(row['SKU'])] = row['Target Qty']
+            
+            st.markdown("---")
+
             # 計算按鈕
             if st.button("🚀 開始計算", type="primary", use_container_width=True):
                 with st.spinner("正在計算中..."):
-                    results_df = calculate_safety_stock(df, settings)
+                    results_df = calculate_safety_stock(df, settings, sku_targets)
                     
                     if len(results_df) > 0:
                         # 保存到 session state
