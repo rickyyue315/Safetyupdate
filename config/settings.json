@@ -1,0 +1,6 @@
+{
+  "max_safety_stock_days": 7,
+  "moq_multiplier": 1.25,
+  "moq_constraint_mode": "multiplier",
+  "shop_class_max_days": {}
+}

@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  safety-stock-app:
+    build: .
+    container_name: safety-stock-calculator
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
