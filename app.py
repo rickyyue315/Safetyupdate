@@ -670,24 +670,78 @@ def main():
             st.subheader("🎯 SKU 目標數量分配 (Target Safety Stock)")
             st.info("在此輸入 SKU 的總目標數量，系統將自動按比例分配至各店舖。若輸入 0 則使用標準計算公式。")
             
+            # 檢查可選欄位是否存在
+            has_product_hierarchy = 'Product Hierarchy' in df.columns
+            has_article_description = 'Article Description' in df.columns
+            
+            # 從原始 df 提取 SKU 層級資訊
+            agg_dict = {}
+            if has_product_hierarchy:
+                agg_dict['Product Hierarchy'] = 'first'
+            if has_article_description:
+                agg_dict['Article Description'] = 'first'
+            
+            if agg_dict:
+                sku_info = df.groupby('Article').agg(agg_dict).reset_index()
+            else:
+                # 如果沒有可選欄位，只按 Article 分組
+                sku_info = df.groupby('Article').first().reset_index()
+            
             # 準備 SKU 編輯表格
             unique_skus = sorted(df['Article'].unique().astype(str))
-            sku_target_data = [{"SKU": sku, "Target Qty": 0} for sku in unique_skus]
+            sku_target_data = []
+            
+            for sku in unique_skus:
+                # 查找該 SKU 的資訊
+                sku_info_row = sku_info[sku_info['Article'] == sku]
+                if len(sku_info_row) > 0:
+                    product_hierarchy = sku_info_row['Product Hierarchy'].values[0] if has_product_hierarchy else ""
+                    article_description = sku_info_row['Article Description'].values[0] if has_article_description else ""
+                else:
+                    product_hierarchy = ""
+                    article_description = ""
+                
+                sku_target_data.append({
+                    "SKU": sku,
+                    "Product Hierarchy": product_hierarchy,
+                    "Article Description": article_description,
+                    "Target Qty": 0
+                })
+            
             sku_target_df = pd.DataFrame(sku_target_data)
+            
+            # 建立基礎 column_config
+            column_config = {
+                "SKU": st.column_config.TextColumn("SKU (Article)", disabled=True),
+                "Target Qty": st.column_config.NumberColumn(
+                    "Target Qty",
+                    min_value=0,
+                    step=1,
+                    format="%d",
+                    help="輸入該 SKU 的總目標數量"
+                )
+            }
+            
+            # 如果欄位存在，加入 column_config
+            if has_product_hierarchy:
+                column_config["Product Hierarchy"] = st.column_config.TextColumn(
+                    "Product Hierarchy",
+                    disabled=True,
+                    help="產品階層"
+                )
+            
+            if has_article_description:
+                column_config["Article Description"] = st.column_config.TextColumn(
+                    "Article Description",
+                    disabled=True,
+                    width="large",
+                    help="商品描述"
+                )
             
             # 顯示編輯器
             edited_sku_df = st.data_editor(
                 sku_target_df,
-                column_config={
-                    "SKU": st.column_config.TextColumn("SKU (Article)", disabled=True),
-                    "Target Qty": st.column_config.NumberColumn(
-                        "Target Qty",
-                        min_value=0,
-                        step=1,
-                        format="%d",
-                        help="輸入該 SKU 的總目標數量"
-                    )
-                },
+                column_config=column_config,
                 use_container_width=True,
                 hide_index=True,
                 key="sku_target_editor"

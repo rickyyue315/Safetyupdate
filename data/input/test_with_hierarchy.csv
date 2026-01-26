@@ -1,0 +1,6 @@
+Article,Site,Class,Last Month Sold Qty,Last 2 Month Sold Qty,Supply Source,MOQ,Target Qty,Product Hierarchy,Article Description
+ART001,S001,AA,120,240,1,10,25,SHOES,Men's Running Shoes - Red
+ART002,S002,A1,100,200,1,8,20,SHIRTS,Women's Cotton Shirt - Blue
+ART003,S003,A2,80,160,1,6,15,ACCESSORIES,Leather Belt - Black
+ART004,S004,A3,60,120,1,5,12,SHOES,Kids' Sneakers - White
+ART005,S005,B1,50,100,2,4,10,SHIRTS,Men's Polo Shirt - Green
