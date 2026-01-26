@@ -695,8 +695,9 @@ def main():
                 # 查找該 SKU 的資訊
                 sku_info_row = sku_info[sku_info['Article'] == sku]
                 if len(sku_info_row) > 0:
-                    product_hierarchy = sku_info_row['Product Hierarchy'].values[0] if has_product_hierarchy else ""
-                    article_description = sku_info_row['Article Description'].values[0] if has_article_description else ""
+                    # 使用 .get() 方法安全地提取資料
+                    product_hierarchy = sku_info_row.get('Product Hierarchy', pd.Series([""])).values[0] if has_product_hierarchy else ""
+                    article_description = sku_info_row.get('Article Description', pd.Series([""])).values[0] if has_article_description else ""
                 else:
                     product_hierarchy = ""
                     article_description = ""
