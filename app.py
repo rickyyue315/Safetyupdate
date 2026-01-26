@@ -680,16 +680,23 @@ def main():
             
             for sku in unique_skus:
                 # 直接找到該 SKU 在原始 df 中的第一行資料
-                sku_first_row = df[df['Article'] == sku].iloc[0]
+                sku_rows = df[df['Article'] == sku]
                 
-                # 從第一行提取資料
-                product_hierarchy = sku_first_row['Product Hierarchy'] if has_product_hierarchy else ""
-                article_description = sku_first_row['Article Description'] if has_article_description else ""
-                
-                # 處理 NaN 值
-                if pd.isna(product_hierarchy):
+                if len(sku_rows) > 0:
+                    sku_first_row = sku_rows.iloc[0]
+                    
+                    # 從第一行提取資料
+                    product_hierarchy = sku_first_row['Product Hierarchy'] if has_product_hierarchy else ""
+                    article_description = sku_first_row['Article Description'] if has_article_description else ""
+                    
+                    # 處理 NaN 值
+                    if pd.isna(product_hierarchy):
+                        product_hierarchy = ""
+                    if pd.isna(article_description):
+                        article_description = ""
+                else:
+                    # 如果沒有找到該 SKU 的資料，使用空值
                     product_hierarchy = ""
-                if pd.isna(article_description):
                     article_description = ""
                 
                 sku_target_data.append({
