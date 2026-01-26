@@ -30,11 +30,15 @@
   - D1 → 1.28 (90.0%)
 
 - **最終安全庫存調整規則（優先順序）**  
-  1. **Target Qty 模式**（如果啟用且 Target Qty 存在）：
+  1. **Target Allocation 模式**（如果在 UI 輸入了 SKU Target Qty）：
+     - 根據輸入的 SKU 總目標數量，按標準模式計算出的比例分配至各店舖
+     - Target_Safety_Stock = (SKU_Total_Target / SKU_Current_Total_SS) × Store_Suggested_SS
+     - 標記為 `Target Allocation` 模式
+  2. **Target Qty 模式**（如果啟用且 Target Qty 存在）：
      - 直接使用 Target Qty 作為 Safety Stock
      - 跳過原有的 MF、MOQ 約束、天數上限計算
      - Safety Stock Days = Target Qty / Avg_Daily_Sales
-  2. **標準模式**（如果 Target Qty 不存在或未啟用 Target Qty 模式）：
+  3. **標準模式**（如果 Target Qty 不存在或未啟用 Target Qty 模式）：
      - 計算初步值：SS_preliminary = Avg_Daily_Sales × √Lead_Time_Days × MF
      - 套用 MOQ 約束（最高優先）：  
        - Suggested_SS = max(SS_preliminary, MOQ × 1.25)  
@@ -66,19 +70,22 @@
   - SS_after_MOQ  
   - User_Max_Days_Applied  
   - Suggested_Safety_Stock（最終建議值）  
-  - Constraint_Applied（MOQ / 天數上限 / 兩者 / Target Qty）  
+  - Constraint_Applied（MOQ / 天數上限 / 兩者 / Target Qty / Target Allocation）  
   - Safety_Stock_Days（最終值可支撐天數）  
   - **Target_Qty_Used**（是否使用了 Target Qty：True/False）  
-  - **Calculation_Mode**（計算模式："Target Qty" 或 "Standard"）
+  - **Calculation_Mode**（計算模式："Target Qty"、"Standard" 或 "Allocation"）
 
 - **網頁 UI 使用者設定項目**  
   - 安全庫存天數上限（預設 14 天，範圍 7–14 天）  
   - MOQ 約束乘數（預設 1.25，可調整）  
   - MOQ 約束模式（乘數模式 / 加 1 模式）  
-  - **Target Qty 模式**（新增，預設關閉）  
+  - **Target Qty 模式**（預設關閉）  
     - 啟用後，如果輸入資料包含 Target Qty 欄位，直接使用 Target Qty 作為 Safety Stock  
     - 跳過原有的 MF、MOQ 約束、天數上限計算  
     - 適合用於按未來一個月的銷售預測來設定 Safety Stock
+  - **Target Allocation 模式**（新增）
+    - 在計算頁面輸入 SKU 的總目標數量
+    - 系統自動按標準模式計算出的比例分配至各店舖
 
 - **實作注意事項**  
   - Avg_Daily_Sales 建議保留 2 位小數  

@@ -1,24 +1,36 @@
-# 安全(緩衝)庫存計算機 v1.0
-# Safety(Buffer) Stock Calculation v1.0
+# 安全(緩衝)庫存計算機 v2.0
+# Safety(Buffer) Stock Calculation v2.0
 
 ## 📋 專案簡介
 
 本系統根據實際可用資料欄位及商業限制，計算合理的安全庫存建議值。系統確保重點店（高階 Shop Class）擁有較高服務水準，同時滿足 MOQ 最小訂購量要求，並允許使用者自訂安全庫存天數上限（7–14 天）。
+
+**v2.0 新增功能**：支援 Target Qty 模式與 SKU 目標數量分配（Target Allocation），可直接根據銷售預測設定安全庫存。
 
 ## ✨ 核心功能
 
 - **智能計算**: 根據平均日銷量、前置時間和合併因素計算安全庫存
 - **MOQ 約束**: 自動套用最小訂購量約束（支援乘數模式和加 1 模式）
 - **天數上限**: 支援自訂安全庫存天數上限（7-14 天）
+- **Target Qty 模式**: 支援直接使用輸入資料中的 `Target Qty` 作為安全庫存，跳過公式計算
+- **Target Allocation**: 支援輸入 SKU 總目標數量，系統自動按比例分配至各店舖
 - **多種輸入**: 支援 CSV 和 Excel 檔案輸入
-- **結果匯出**: 可匯出計算結果為 Excel 或 CSV 格式
+- **結果匯出**: 可匯出計算結果為 Excel 或 CSV 格式，包含詳細的 SKU 統計摘要
 - **設定管理**: 支援全域設定和按 Shop Class 設定天數上限
 
 ## 📐 計算公式
 
+### 1. 標準模式 (Standard Mode)
 1. **初步安全庫存**: `SS_preliminary = Avg_Daily_Sales × √Lead_Time_Days × MF`
-2. **套用 MOQ 約束**: `Suggested_SS = max(SS_preliminary, MOQ × multiplier)`
+2. **套用 MOQ 約束**: `SS_after_MOQ = max(SS_preliminary, MOQ × multiplier)`
 3. **套用天數上限**: `Suggested_Safety_Stock = min(SS_after_MOQ, Avg_Daily_Sales × Max_Days)`
+
+### 2. Target Qty 模式
+- `Suggested_Safety_Stock = Target Qty` (直接使用輸入值)
+
+### 3. Target Allocation 模式
+- `Target_Safety_Stock = (SKU_Total_Target / SKU_Current_Total_SS) × Store_Suggested_SS`
+- 系統會自動處理分配餘數，確保總和等於目標數量。
 
 ## 🛠️ 技術堆疊
 
@@ -120,6 +132,7 @@ Kilo Safety Stock Calculate/
 | Last 2 Month Sold Qty | 前兩個月銷量總和 | 240 |
 | Supply Source | 供應來源代碼 | 1, 2, 4 |
 | MOQ | 最小訂購量 | 10 |
+| Target Qty | 目標數量 (可選) | 50 |
 
 您可以下載 [`data/input/sample_input.csv`](data/input/sample_input.csv) 作為參考。
 
@@ -132,6 +145,7 @@ Kilo Safety Stock Calculate/
 - **MOQ 約束模式**: 
   - `multiplier`: 乘數模式（預設）
   - `add_one`: 加 1 模式
+- **Target Qty 模式**: 啟用後優先使用 `Target Qty` 欄位
 
 ### 按 Shop Class 設定
 
@@ -182,8 +196,10 @@ Kilo Safety Stock Calculate/
 | SS_after_MOQ | 套用 MOQ 約束後的安全庫存 |
 | User_Max_Days_Applied | 應用的天數上限 |
 | Suggested_Safety_Stock | 建議安全庫存（最終值） |
-| Constraint_Applied | 約束類型（MOQ / 天數上限 / 兩者 / 無） |
+| Constraint_Applied | 約束類型（MOQ / 天數上限 / 兩者 / Target Qty / Target Allocation） |
 | Safety_Stock_Days | 最終值可支撐天數 |
+| Target_Qty_Used | 是否使用了 Target Qty (True/False) |
+| Calculation_Mode | 計算模式 (Standard / Target Qty / Allocation) |
 
 ## 🔧 開發指南
 

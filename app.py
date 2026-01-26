@@ -45,7 +45,7 @@ def save_settings(settings: 'Settings'):
 
 def display_home_page():
     """顯示首頁"""
-    st.title("📦 安全(緩衝)庫存計算機 v1.0")
+    st.title("📦 安全(緩衝)庫存計算機 v2.0")
     st.markdown("---")
     
     st.markdown("""
@@ -89,22 +89,32 @@ def display_home_page():
     
     - **智能計算**: 根據平均日銷量、前置時間和合併因素計算安全庫存
     - **MOQ 約束**: 自動套用最小訂購量約束（支援乘數模式和加 1 模式）
-    - **天數上限**: 支援自訂安全庫存天數上限（3-21 天）
+    - **天數上限**: 支援自訂安全庫存天數上限（7-14 天）
+    - **Target Qty 模式**: 支援直接使用輸入資料中的 `Target Qty` 作為安全庫存
+    - **Target Allocation**: 支援輸入 SKU 總目標數量，系統自動按比例分配至各店舖
     - **多種輸入**: 支援 CSV 和 Excel 檔案輸入
-    - **結果匯出**: 可匯出計算結果為 Excel 或 CSV 格式
+    - **結果匯出**: 可匯出計算結果為 Excel 或 CSV 格式，包含詳細的 SKU 統計摘要
     
     ### 計算公式
     
+    #### 1. 標準模式 (Standard Mode)
     1. **初步安全庫存**: SS_preliminary = Avg_Daily_Sales × √Lead_Time_Days × MF
-    2. **套用 MOQ 約束**: Suggested_SS = max(SS_preliminary, MOQ × multiplier)
-    3. **套用天數上限**: Suggested_Safety_Stock = max(SS_after_MOQ, Avg_Daily_Sales × Max_Days)
+    2. **套用 MOQ 約束**: SS_after_MOQ = max(SS_preliminary, MOQ × multiplier)
+    3. **套用天數上限**: Suggested_Safety_Stock = min(SS_after_MOQ, Avg_Daily_Sales × Max_Days)
+    
+    #### 2. Target Qty 模式
+    - 直接使用輸入資料中的 `Target Qty` 作為安全庫存值。
+    
+    #### 3. Target Allocation 模式
+    - 根據輸入的 SKU 總目標數量，按標準模式計算出的比例分配至各店舖。
     
     ### 使用說明
     
     1. 在「計算」頁面上傳您的資料檔案
     2. 在側邊欄調整系統設定（可選）
-    3. 點擊「開始計算」按鈕
-    4. 查看計算結果並匯出（如需要）
+    3. 如果需要按 SKU 總量分配，在計算頁面的「SKU 目標數量分配」表格中輸入數值
+    4. 點擊「開始計算」按鈕
+    5. 查看計算結果並匯出（如需要）
     
     ### 輸入資料格式
     
@@ -117,6 +127,7 @@ def display_home_page():
     - **Last 2 Month Sold Qty**: 前兩個月銷量總和
     - **Supply Source**: 供應來源代碼（1, 2, 4 等）
     - **MOQ**: 最小訂購量
+    - **Target Qty** (可選): 目標數量
     
     您可以下載 [範例資料檔案](data/input/sample_input.csv) 作為參考。
     """)
