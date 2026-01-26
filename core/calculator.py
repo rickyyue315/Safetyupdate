@@ -121,10 +121,10 @@ class SafetyStockCalculator:
             mf: 合併因素
             
         返回:
-            初步安全庫存（保留 2 位小數）
+            初步安全庫存（向上取整為整數）
         """
         preliminary_ss = avg_daily_sales * math.sqrt(lead_time) * mf
-        return round(preliminary_ss, 2)
+        return math.ceil(preliminary_ss)
     
     def apply_moq_constraint(
         self,
@@ -147,6 +147,7 @@ class SafetyStockCalculator:
             
         返回:
             (SS_after_MOQ, moq_constraint_applied)
+            SS_after_MOQ 為整數（向上取整）
         """
         if mode == MOQ_MODE_MULTIPLIER:
             min_ss = moq * multiplier
@@ -158,7 +159,7 @@ class SafetyStockCalculator:
         ss_after_moq = max(preliminary_ss, min_ss)
         moq_constraint_applied = ss_after_moq > preliminary_ss
         
-        return round(ss_after_moq, 2), moq_constraint_applied
+        return math.ceil(ss_after_moq), moq_constraint_applied
     
     def apply_max_days_constraint(
         self,
