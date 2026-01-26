@@ -91,7 +91,7 @@ def display_home_page():
     - **MOQ 約束**: 自動套用最小訂購量約束（支援乘數模式和加 1 模式）
     - **天數上限**: 支援自訂安全庫存天數上限（7-14 天）
     - **Target Qty 模式**: 支援直接使用輸入資料中的 `Target Qty` 作為安全庫存
-    - **Target Allocation**: 支援輸入 SKU 總目標數量，系統自動按比例分配至各店舖
+    - **Target Safety Stock 模式**: 支援輸入 SKU 總目標數量，系統自動按比例分配至各店舖
     - **多種輸入**: 支援 CSV 和 Excel 檔案輸入
     - **結果匯出**: 可匯出計算結果為 Excel 或 CSV 格式，包含詳細的 SKU 統計摘要
     
@@ -105,7 +105,7 @@ def display_home_page():
     #### 2. Target Qty 模式
     - 直接使用輸入資料中的 `Target Qty` 作為安全庫存值。
     
-    #### 3. Target Allocation 模式
+    #### 3. Target Safety Stock 模式
     - 根據輸入的 SKU 總目標數量，按標準模式計算出的比例分配至各店舖。
     
     ### 使用說明
@@ -596,8 +596,8 @@ def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets
                 
                 # 5. 更新 DataFrame - 將分配結果寫入 Target_Safety_Stock，保留 Suggested_Safety_Stock
                 results_df.loc[sku_mask, 'Target_Safety_Stock'] = allocated_ss
-                results_df.loc[sku_mask, 'Constraint_Applied'] = 'Target Allocation'
-                results_df.loc[sku_mask, 'Calculation_Mode'] = 'Allocation'
+                results_df.loc[sku_mask, 'Constraint_Applied'] = 'Target Safety Stock'
+                results_df.loc[sku_mask, 'Calculation_Mode'] = 'Target Safety Stock'
                 
                 # 6. 更新 Notes 和其他相關欄位
                 for idx in sku_mask[sku_mask].index:
@@ -615,7 +615,7 @@ def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets
                     # 更新 Notes
                     old_notes = results_df.loc[idx, 'Notes']
                     allocation_note = (
-                        f"\n\n--- Target Allocation ---\n"
+                        f"\n\n--- Target Safety Stock ---\n"
                         f"Target Qty: {target_qty}\n"
                         f"Original Total SS: {current_total_ss}\n"
                         f"Allocation Factor: {factor:.4f}\n"
@@ -667,7 +667,7 @@ def main():
             st.markdown("---")
             
             # SKU Target Qty Allocation Section
-            st.subheader("🎯 SKU 目標數量分配 (Target Allocation)")
+            st.subheader("🎯 SKU 目標數量分配 (Target Safety Stock)")
             st.info("在此輸入 SKU 的總目標數量，系統將自動按比例分配至各店舖。若輸入 0 則使用標準計算公式。")
             
             # 準備 SKU 編輯表格

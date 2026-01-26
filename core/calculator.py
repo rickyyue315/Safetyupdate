@@ -306,7 +306,7 @@ class SafetyStockCalculator:
                 "Suggested_SS_Days": safety_stock_days,
                 # Original_Safety_Stock_Days
                 FIELD_ORIGINAL_SAFETY_STOCK_DAYS: round(original_safety_stock / avg_daily_sales, 2) if original_safety_stock is not None and avg_daily_sales > 0 else 0,
-                # Target Safety Stock 欄位（預留給 Target Allocation 使用）
+                # Target Safety Stock 欄位（預留給 Target Safety Stock 使用）
                 FIELD_TARGET_SAFETY_STOCK: 0,
                 FIELD_TARGET_SAFETY_STOCK_DAYS: 0,
                 # 新增欄位
@@ -410,7 +410,7 @@ class SafetyStockCalculator:
             "Suggested_SS_Days": round(suggested_ss / avg_daily_sales, 2) if avg_daily_sales > 0 else 0,
             # 新增 Original_Safety_Stock_Days 欄位
             FIELD_ORIGINAL_SAFETY_STOCK_DAYS: round(original_safety_stock / avg_daily_sales, 2) if original_safety_stock is not None and avg_daily_sales > 0 else 0,
-            # Target Safety Stock 欄位（預留給 Target Allocation 使用）
+            # Target Safety Stock 欄位（預留給 Target Safety Stock 使用）
             FIELD_TARGET_SAFETY_STOCK: 0,
             FIELD_TARGET_SAFETY_STOCK_DAYS: 0,
             # 新增 RP Type 和 Notes 欄位
