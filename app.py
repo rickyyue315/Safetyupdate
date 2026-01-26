@@ -502,6 +502,15 @@ def display_download_buttons(results_df: 'pd.DataFrame'):
         st.error(f"❌ 生成下載檔案時發生錯誤：{str(e)}")
 
 
+# Class 權重對照表 (用於 SKU 目標數量分配)
+CLASS_WEIGHTS = {
+    "AA": 3, "A1": 3, "A2": 3, "A3": 3,
+    "B1": 2, "B2": 2,
+    "C1": 1, "C2": 1,
+    "D1": 1
+}
+
+
 def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets: dict = None) -> 'pd.DataFrame':
     """
     對資料執行安全庫存計算
@@ -551,7 +560,7 @@ def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets
     # 轉換為 DataFrame
     results_df = pd.DataFrame(results)
     
-    # 如果有 SKU 目標數量，執行分配邏輯
+    # 如果有 SKU 目標數量，執行分配邏輯 (按 Class 權重分配)
     if sku_targets and len(results_df) > 0:
         # 確保 Article 欄位類型一致
         results_df['Article'] = results_df['Article'].astype(str)
@@ -567,41 +576,44 @@ def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets
             
             if len(sku_records) == 0:
                 continue
-                
-            # 計算該 SKU 目前的總安全庫存 (基於標準計算)
-            current_total_ss = sku_records['Suggested_Safety_Stock'].sum()
             
-            if current_total_ss > 0:
-                # 計算分配比例並更新
-                # 使用 floor 確保不超過 target，最後再分配餘數
+            # 按 Class 權重分配邏輯
+            # 1. 取得每個店舖的 Class 權重
+            sku_records = sku_records.copy()
+            sku_records['Weight'] = sku_records['Class'].map(CLASS_WEIGHTS).fillna(1)
+            
+            # 2. 計算總權重
+            total_weight = sku_records['Weight'].sum()
+            
+            if total_weight > 0:
+                # 3. 計算分配係數 (每單位權重分配的數量)
+                factor = target_qty / total_weight
                 
-                # 1. 計算分配係數
-                factor = target_qty / current_total_ss
+                # 4. 初步分配 (向下取整)
+                allocated_ss = (sku_records['Weight'] * factor).apply(math.floor)
                 
-                # 2. 初步分配 (向下取整)
-                allocated_ss = (sku_records['Suggested_Safety_Stock'] * factor).apply(math.floor)
-                
-                # 3. 計算餘數
+                # 5. 計算餘數
                 current_allocated_sum = allocated_ss.sum()
                 remainder = int(target_qty - current_allocated_sum)
                 
-                # 4. 分配餘數 (分配給計算後數值小數部分最大的店舖)
+                # 6. 分配餘數 (分配給計算後數值小數部分最大的店舖)
                 if remainder > 0:
                     # 計算小數部分
-                    fractional_parts = (sku_records['Suggested_Safety_Stock'] * factor) - allocated_ss
+                    fractional_parts = (sku_records['Weight'] * factor) - allocated_ss
                     # 排序並取前 remainder 個店舖的 index
                     top_indices = fractional_parts.sort_values(ascending=False).head(remainder).index
                     # 加 1
                     allocated_ss.loc[top_indices] += 1
                 
-                # 5. 更新 DataFrame - 將分配結果寫入 Target_Safety_Stock，保留 Suggested_Safety_Stock
-                results_df.loc[sku_mask, 'Target_Safety_Stock'] = allocated_ss
+                # 7. 更新 DataFrame - 將分配結果寫入 Target_Safety_Stock，保留 Suggested_Safety_Stock
+                results_df.loc[sku_mask, 'Target_Safety_Stock'] = allocated_ss.values
                 results_df.loc[sku_mask, 'Constraint_Applied'] = 'Target Safety Stock'
                 results_df.loc[sku_mask, 'Calculation_Mode'] = 'Target Safety Stock'
                 
-                # 6. 更新 Notes 和其他相關欄位
+                # 8. 更新 Notes 和其他相關欄位
                 for idx in sku_mask[sku_mask].index:
-                    original_ss = sku_records.loc[idx, 'Suggested_Safety_Stock'] # 這是標準計算的 SS
+                    shop_class = results_df.loc[idx, 'Class']
+                    weight = sku_records.loc[idx, 'Weight']
                     new_ss = results_df.loc[idx, 'Target_Safety_Stock']
                     avg_daily_sales = results_df.loc[idx, 'Avg_Daily_Sales']
                     
@@ -615,9 +627,10 @@ def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets
                     # 更新 Notes
                     old_notes = results_df.loc[idx, 'Notes']
                     allocation_note = (
-                        f"\n\n--- Target Safety Stock ---\n"
+                        f"\n\n--- Target Safety Stock (按 Class 權重分配) ---\n"
                         f"Target Qty: {target_qty}\n"
-                        f"Original Total SS: {current_total_ss}\n"
+                        f"Class: {shop_class}, Weight: {weight}\n"
+                        f"Total Weight: {total_weight}\n"
                         f"Allocation Factor: {factor:.4f}\n"
                         f"Allocated SS: {new_ss}"
                     )
@@ -668,7 +681,7 @@ def main():
             
             # SKU Target Qty Allocation Section
             st.subheader("🎯 SKU 目標數量分配 (Target Safety Stock)")
-            st.info("在此輸入 SKU 的總目標數量，系統將自動按比例分配至各店舖。若輸入 0 則使用標準計算公式。")
+            st.info("在此輸入 SKU 的總目標數量，系統將自動按店舖等級 (Class) 比例分配至各店舖。\n\n**分配比例**：Class A (AA, A1, A2, A3) : Class B (B1, B2) : Class C (C1, C2) : Class D (D1) = 3 : 2 : 1 : 1\n\n若輸入 0 則使用標準計算公式。")
             
             # 檢查可選欄位是否存在
             has_product_hierarchy = 'Product Hierarchy' in df.columns
