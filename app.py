@@ -680,7 +680,8 @@ def main():
             
             for sku in unique_skus:
                 # 直接找到該 SKU 在原始 df 中的第一行資料
-                sku_rows = df[df['Article'] == sku]
+                # 確保比較時類型一致（將 Article 欄位轉為字串）
+                sku_rows = df[df['Article'].astype(str) == sku]
                 
                 if len(sku_rows) > 0:
                     sku_first_row = sku_rows.iloc[0]
