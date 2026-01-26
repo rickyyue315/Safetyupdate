@@ -674,32 +674,22 @@ def main():
             has_product_hierarchy = 'Product Hierarchy' in df.columns
             has_article_description = 'Article Description' in df.columns
             
-            # 從原始 df 提取 SKU 層級資訊
-            agg_dict = {}
-            if has_product_hierarchy:
-                agg_dict['Product Hierarchy'] = 'first'
-            if has_article_description:
-                agg_dict['Article Description'] = 'first'
-            
-            if agg_dict:
-                sku_info = df.groupby('Article').agg(agg_dict).reset_index()
-            else:
-                # 如果沒有可選欄位，只按 Article 分組
-                sku_info = df.groupby('Article').first().reset_index()
-            
             # 準備 SKU 編輯表格
             unique_skus = sorted(df['Article'].unique().astype(str))
             sku_target_data = []
             
             for sku in unique_skus:
-                # 查找該 SKU 的資訊
-                sku_info_row = sku_info[sku_info['Article'] == sku]
-                if len(sku_info_row) > 0:
-                    # 使用 .get() 方法安全地提取資料
-                    product_hierarchy = sku_info_row.get('Product Hierarchy', pd.Series([""])).values[0] if has_product_hierarchy else ""
-                    article_description = sku_info_row.get('Article Description', pd.Series([""])).values[0] if has_article_description else ""
-                else:
+                # 直接找到該 SKU 在原始 df 中的第一行資料
+                sku_first_row = df[df['Article'] == sku].iloc[0]
+                
+                # 從第一行提取資料
+                product_hierarchy = sku_first_row['Product Hierarchy'] if has_product_hierarchy else ""
+                article_description = sku_first_row['Article Description'] if has_article_description else ""
+                
+                # 處理 NaN 值
+                if pd.isna(product_hierarchy):
                     product_hierarchy = ""
+                if pd.isna(article_description):
                     article_description = ""
                 
                 sku_target_data.append({
