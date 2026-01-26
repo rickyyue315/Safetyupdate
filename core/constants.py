@@ -60,6 +60,11 @@ FIELD_TARGET_QTY = "Target Qty"
 
 
 # 輸出欄位名稱
+FIELD_TARGET_SAFETY_STOCK = "Target_Safety_Stock"
+FIELD_TARGET_SAFETY_STOCK_DAYS = "Target_Safety_Stock_Days"
+
+
+# 輸出欄位名稱
 FIELD_AVG_DAILY_SALES = "Avg_Daily_Sales"
 FIELD_LEAD_TIME_DAYS = "Lead_Time_Days"
 FIELD_MF_USED = "MF_Used"

@@ -335,6 +335,8 @@ def display_results_summary(results_df: 'pd.DataFrame'):
         'Preliminary_SS_Days',      # 新增
         'SS_after_MOQ_Days',        # 新增
         'Suggested_SS_Days',        # 新增
+        'Target_Safety_Stock',      # 新增
+        'Target_Safety_Stock_Days',  # 新增
         'Target_Qty_Used',         # 新增
         'Calculation_Mode',          # 新增
         'Notes'                    # 新增
@@ -396,6 +398,8 @@ def display_download_buttons(results_df: 'pd.DataFrame'):
                 'Preliminary_SS_Days',      # 新增
                 'SS_after_MOQ_Days',        # 新增
                 'Suggested_SS_Days',        # 新增
+                'Target_Safety_Stock',      # 新增
+                'Target_Safety_Stock_Days',  # 新增
                 'Target_Qty_Used',         # 新增
                 'Calculation_Mode',          # 新增
                 'Notes'                    # 新增
@@ -433,7 +437,9 @@ def display_download_buttons(results_df: 'pd.DataFrame'):
                     'Last_Month_Sold_Qty': 'sum',
                     'Last_2_Month_Sold_Qty': 'sum',
                     'Suggested_Safety_Stock': 'sum',
-                    'Safety_Stock_Days': 'mean'
+                    'Safety_Stock_Days': 'mean',
+                    'Target_Safety_Stock': 'sum',
+                    'Target_Safety_Stock_Days': 'mean'
                 }).reset_index()
                 
                 # 重新命名欄位
@@ -447,7 +453,9 @@ def display_download_buttons(results_df: 'pd.DataFrame'):
                     '上月銷量總和',
                     '前兩月銷量總和',
                     '建議安全庫存總和',
-                    '平均支撐天數'
+                    '平均支撐天數',
+                    'Target Safety Stock 總和',
+                    'Target Safety Stock 平均天數'
                 ]
                 
                 # 寫入 SKU 摘要到 Summary 工作表（從第 6 行開始）
@@ -575,24 +583,23 @@ def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets
                     # 加 1
                     allocated_ss.loc[top_indices] += 1
                 
-                # 5. 更新 DataFrame
-                results_df.loc[sku_mask, 'Suggested_Safety_Stock'] = allocated_ss
+                # 5. 更新 DataFrame - 將分配結果寫入 Target_Safety_Stock，保留 Suggested_Safety_Stock
+                results_df.loc[sku_mask, 'Target_Safety_Stock'] = allocated_ss
                 results_df.loc[sku_mask, 'Constraint_Applied'] = 'Target Allocation'
                 results_df.loc[sku_mask, 'Calculation_Mode'] = 'Allocation'
                 
                 # 6. 更新 Notes 和其他相關欄位
                 for idx in sku_mask[sku_mask].index:
                     original_ss = sku_records.loc[idx, 'Suggested_Safety_Stock'] # 這是標準計算的 SS
-                    new_ss = results_df.loc[idx, 'Suggested_Safety_Stock']
+                    new_ss = results_df.loc[idx, 'Target_Safety_Stock']
                     avg_daily_sales = results_df.loc[idx, 'Avg_Daily_Sales']
                     
-                    # 更新支撐天數
+                    # 更新 Target Safety Stock 的支撐天數
                     if avg_daily_sales > 0:
                         new_days = round(new_ss / avg_daily_sales, 2)
                     else:
                         new_days = 0
-                    results_df.loc[idx, 'Suggested_SS_Days'] = new_days
-                    results_df.loc[idx, 'Safety_Stock_Days'] = new_days
+                    results_df.loc[idx, 'Target_Safety_Stock_Days'] = new_days
                     
                     # 更新 Notes
                     old_notes = results_df.loc[idx, 'Notes']
