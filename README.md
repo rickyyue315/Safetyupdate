@@ -35,7 +35,13 @@
   - Class C (C1, C2)：權重 C
   - Class D (D1)：權重 D
 - 預設權重：A=3, B=2, C=1, D=1（可在系統設定中自訂）
-- `Target_Safety_Stock_i = Weight_i × (SKU_Total_Target / Total_Weight)`
+- 分配邏輯：
+  1. 計算總權重：`Total_Weight = Σ Weight_i`
+  2. 計算分配係數：`Factor = SKU_Total_Target / Total_Weight`
+  3. 初步分配：`Allocated_i = floor(Weight_i × Factor)`
+  4. 計算餘數：`Remainder = SKU_Total_Target - Σ Allocated_i`
+  5. 將餘數分配給小數部分最大的店舖（每個店舖加 1）
+  6. 確保總和等於目標數量
 - 系統會自動處理分配餘數，確保總和等於目標數量。
 
 ## 🛠️ 技術堆疊
@@ -160,6 +166,17 @@ Kilo Safety Stock Calculate/
 - 範圍：7-14 天
 - 留空則使用全域設定
 
+### Class 權重設定
+
+用於 Target Safety Stock 模式的 SKU 目標數量分配：
+- **Class A (AA, A1, A2, A3)**：權重 A（預設 3）
+- **Class B (B1, B2)**：權重 B（預設 2）
+- **Class C (C1, C2)**：權重 C（預設 1）
+- **Class D (D1)**：權重 D（預設 1）
+- 權重越大，分配的數量越多
+- 可在系統設定中自訂各類別的權重（範圍：1-100）
+- 預設分配比例：A : B : C : D = 3 : 2 : 1 : 1
+
 ## 📤 使用說明
 
 1. **上傳資料檔案**
@@ -175,10 +192,11 @@ Kilo Safety Stock Calculate/
 3. **設定 SKU 目標數量**（可選）
    - 在「SKU 目標數量分配」表格中輸入各 SKU 的總目標數量
    - 系統會按店舖等級 (Class) 權重比例自動分配：
-     - Class A (AA, A1, A2, A3)：權重 3
-     - Class B (B1, B2)：權重 2
-     - Class C (C1, C2)：權重 1
-     - Class D (D1)：權重 1
+     - Class A (AA, A1, A2, A3)：權重 A（預設 3）
+     - Class B (B1, B2)：權重 B（預設 2）
+     - Class C (C1, C2)：權重 C（預設 1）
+     - Class D (D1)：權重 D（預設 1）
+   - 可在系統設定中自訂各類別的權重
    - 若輸入 0 則使用標準計算公式
 
 4. **執行計算**
