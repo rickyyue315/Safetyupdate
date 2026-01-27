@@ -228,7 +228,7 @@ def display_settings_panel(settings: 'Settings') -> 'Settings':
     
     enable_custom_class_weights = st.sidebar.checkbox(
         "啟用自訂 Class 權重",
-        value=settings.class_weights != {"A": 3, "B": 2, "C": 1, "D": 1},
+        value=settings.class_weights is not None and settings.class_weights != {"A": 3, "B": 2, "C": 1, "D": 1},
         help="為不同的 Class 類別設定自訂權重（預設：A=3, B=2, C=1, D=1）"
     )
     
