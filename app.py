@@ -221,13 +221,54 @@ def display_settings_panel(settings: 'Settings') -> 'Settings':
             "• 適合用於按未來一個月的銷售預測來設定 Safety Stock"
         )
     
+    # Class 權重設定
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Class 權重設定")
+    st.sidebar.markdown("**用於 SKU 目標數量分配**")
+    
+    enable_custom_class_weights = st.sidebar.checkbox(
+        "啟用自訂 Class 權重",
+        value=settings.class_weights != {"A": 3, "B": 2, "C": 1, "D": 1},
+        help="為不同的 Class 類別設定自訂權重（預設：A=3, B=2, C=1, D=1）"
+    )
+    
+    class_weights = {}
+    if enable_custom_class_weights:
+        st.sidebar.markdown("**自訂權重**")
+        valid_class_categories = ["A", "B", "C", "D"]
+        for category in valid_class_categories:
+            custom_weight = st.sidebar.number_input(
+                f"Class {category} 權重",
+                min_value=1,
+                max_value=100,
+                value=settings.class_weights.get(category, {"A": 3, "B": 2, "C": 1, "D": 1}[category]),
+                key=f"class_weight_{category}",
+                help=f"Class {category} 的分配權重（預設：A=3, B=2, C=1, D=1）"
+            )
+            class_weights[category] = custom_weight
+    else:
+        # 使用預設權重
+        class_weights = {"A": 3, "B": 2, "C": 1, "D": 1}
+    
+    # 顯示權重說明
+    st.sidebar.info(
+        "📋 **Class 權重說明**\n\n"
+        "權重用於 SKU 目標數量分配：\n"
+        "• Class A (AA, A1, A2, A3)：權重 A\n"
+        "• Class B (B1, B2)：權重 B\n"
+        "• Class C (C1, C2)：權重 C\n"
+        "• Class D (D1)：權重 D\n"
+        "• 權重越大，分配的數量越多"
+    )
+    
     # 建立新設定
     new_settings = Settings(
         max_safety_stock_days=max_days,
         moq_multiplier=moq_multiplier,
         moq_constraint_mode=moq_mode,
         shop_class_max_days=shop_class_max_days if enable_custom_max_days else {},
-        use_target_qty_mode=use_target_qty_mode
+        use_target_qty_mode=use_target_qty_mode,
+        class_weights=class_weights
     )
     
     # 按鈕區域
@@ -479,7 +520,7 @@ def display_download_buttons(results_df: 'pd.DataFrame'):
             st.download_button(
                 label="📊 下載 Excel 檔案",
                 data=excel_buffer,
-                file_name=f"safety_stock_results_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                file_name=f"safety_stock_results_{pd.Timestamp.now(tz='Asia/Hong_Kong').strftime('%Y%m%d_%H%M%S')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True
             )
@@ -493,7 +534,7 @@ def display_download_buttons(results_df: 'pd.DataFrame'):
             st.download_button(
                 label="📄 下載 CSV 檔案",
                 data=csv_buffer.getvalue(),
-                file_name=f"safety_stock_results_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                file_name=f"safety_stock_results_{pd.Timestamp.now(tz='Asia/Hong_Kong').strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv",
                 use_container_width=True
             )
@@ -502,12 +543,12 @@ def display_download_buttons(results_df: 'pd.DataFrame'):
         st.error(f"❌ 生成下載檔案時發生錯誤：{str(e)}")
 
 
-# Class 權重對照表 (用於 SKU 目標數量分配)
-CLASS_WEIGHTS = {
-    "AA": 3, "A1": 3, "A2": 3, "A3": 3,
-    "B1": 2, "B2": 2,
-    "C1": 1, "C2": 1,
-    "D1": 1
+# 將 Class 類別映射到權重類別
+CLASS_CATEGORY_MAP = {
+    "AA": "A", "A1": "A", "A2": "A", "A3": "A",
+    "B1": "B", "B2": "B",
+    "C1": "C", "C2": "C",
+    "D1": "D"
 }
 
 
@@ -578,11 +619,14 @@ def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets
                 continue
             
             # 按 Class 權重分配邏輯
-            # 1. 取得每個店舖的 Class 權重
+            # 1. 取得每個店舖的 Class 權重類別
             sku_records = sku_records.copy()
-            sku_records['Weight'] = sku_records['Class'].map(CLASS_WEIGHTS).fillna(1)
+            sku_records['Weight_Category'] = sku_records['Class'].map(CLASS_CATEGORY_MAP).fillna("D")
             
-            # 2. 計算總權重
+            # 2. 使用設定中的權重
+            sku_records['Weight'] = sku_records['Weight_Category'].map(settings.class_weights).fillna(1)
+            
+            # 3. 計算總權重
             total_weight = sku_records['Weight'].sum()
             
             if total_weight > 0:
@@ -681,7 +725,7 @@ def main():
             
             # SKU Target Qty Allocation Section
             st.subheader("🎯 SKU 目標數量分配 (Target Safety Stock)")
-            st.info("在此輸入 SKU 的總目標數量，系統將自動按店舖等級 (Class) 比例分配至各店舖。\n\n**分配比例**：Class A (AA, A1, A2, A3) : Class B (B1, B2) : Class C (C1, C2) : Class D (D1) = 3 : 2 : 1 : 1\n\n若輸入 0 則使用標準計算公式。")
+            st.info(f"在此輸入 SKU 的總目標數量，系統將自動按店舖等級 (Class) 比例分配至各店舖。\n\n**分配比例**：Class A (AA, A1, A2, A3) : Class B (B1, B2) : Class C (C1, C2) : Class D (D1) = {settings.class_weights.get('A', 3)} : {settings.class_weights.get('B', 2)} : {settings.class_weights.get('C', 1)} : {settings.class_weights.get('D', 1)}\n\n💡 提示：您可以在左側「系統設定」中自訂各類別的權重。\n\n若輸入 0 則使用標準計算公式。")
             
             # 檢查可選欄位是否存在
             has_product_hierarchy = 'Product Hierarchy' in df.columns
@@ -776,7 +820,7 @@ def main():
                     if len(results_df) > 0:
                         # 保存到 session state
                         st.session_state.results_df = results_df
-                        st.session_state.calculation_timestamp = pd.Timestamp.now()
+                        st.session_state.calculation_timestamp = pd.Timestamp.now(tz='Asia/Hong_Kong')
                         
                         st.success(f"✅ 計算完成！共處理 {len(results_df)} 筆記錄")
                         display_results_summary(results_df)
