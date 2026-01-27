@@ -402,11 +402,13 @@ def display_results_summary(results_df: 'pd.DataFrame'):
         'Preliminary_SS', 'SS_after_MOQ',
         'User_Max_Days_Applied',
         'Suggested_Safety_Stock',
+        'Suggested_Diff',          # 新增
         'Constraint_Applied',
         'Preliminary_SS_Days',      # 新增
         'SS_after_MOQ_Days',        # 新增
         'Suggested_SS_Days',        # 新增
         'Target_Safety_Stock',      # 新增
+        'Target_Diff',             # 新增
         'Target_Safety_Stock_Days',  # 新增
         'Target_Qty_Used',         # 新增
         'Calculation_Mode',          # 新增
@@ -465,11 +467,13 @@ def display_download_buttons(results_df: 'pd.DataFrame'):
                 'Preliminary_SS', 'SS_after_MOQ',
                 'User_Max_Days_Applied',
                 'Suggested_Safety_Stock',
+                'Suggested_Diff',          # 新增
                 'Constraint_Applied',
                 'Preliminary_SS_Days',      # 新增
                 'SS_after_MOQ_Days',        # 新增
                 'Suggested_SS_Days',        # 新增
                 'Target_Safety_Stock',      # 新增
+                'Target_Diff',             # 新增
                 'Target_Safety_Stock_Days',  # 新增
                 'Target_Qty_Used',         # 新增
                 'Calculation_Mode',          # 新增
@@ -477,7 +481,13 @@ def display_download_buttons(results_df: 'pd.DataFrame'):
             ]
             # 只輸出存在的欄位
             existing_columns = [col for col in display_columns if col in results_df.columns]
-            results_df.to_excel(writer, sheet_name='Results', index=False, columns=existing_columns)
+            
+            # 確保 Article 欄位以文字格式輸出
+            results_df_copy = results_df.copy()
+            if 'Article' in results_df_copy.columns:
+                results_df_copy['Article'] = results_df_copy['Article'].astype(str)
+            
+            results_df_copy.to_excel(writer, sheet_name='Results', index=False, columns=existing_columns)
             
             # 統計摘要工作表 - 全體統計
             summary_data = {
@@ -679,6 +689,11 @@ def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets
                     weight = sku_records.loc[idx, 'Weight']
                     new_ss = results_df.loc[idx, 'Target_Safety_Stock']
                     avg_daily_sales = results_df.loc[idx, 'Avg_Daily_Sales']
+                    original_ss = results_df.loc[idx, 'Original_Safety_Stock']
+                    
+                    # 計算 Target_Diff
+                    target_diff = new_ss - original_ss
+                    results_df.loc[idx, 'Target_Diff'] = target_diff
                     
                     # 更新 Target Safety Stock 的支撐天數
                     if avg_daily_sales > 0:
@@ -695,7 +710,8 @@ def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets
                         f"Class: {shop_class}, Weight: {weight}\n"
                         f"Total Weight: {total_weight}\n"
                         f"Allocation Factor: {factor:.4f}\n"
-                        f"Allocated SS: {new_ss}"
+                        f"Allocated SS: {new_ss}\n"
+                        f"Target Diff: {target_diff}"
                     )
                     results_df.loc[idx, 'Notes'] = old_notes + allocation_note
 

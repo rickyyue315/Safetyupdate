@@ -76,6 +76,8 @@ FIELD_SUGGESTED_SAFETY_STOCK = "Suggested_Safety_Stock"
 FIELD_CONSTRAINT_APPLIED = "Constraint_Applied"
 FIELD_SAFETY_STOCK_DAYS = "Safety_Stock_Days"
 FIELD_ORIGINAL_SAFETY_STOCK_DAYS = "Original_Safety_Stock_Days"
+FIELD_SUGGESTED_DIFF = "Suggested_Diff"
+FIELD_TARGET_DIFF = "Target_Diff"
 
 
 # 約束類型

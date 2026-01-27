@@ -43,15 +43,28 @@ def export_to_excel(df: pd.DataFrame, output_path: str) -> bool:
                 'Preliminary_SS', 'SS_after_MOQ',
                 'User_Max_Days_Applied',
                 'Suggested_Safety_Stock',
+                'Suggested_Diff',          # 新增
                 'Constraint_Applied',
                 'Safety_Stock_Days',
                 'Preliminary_SS_Days',      # 新增
                 'SS_after_MOQ_Days',        # 新增
-                'Suggested_SS_Days'           # 新增
+                'Suggested_SS_Days',        # 新增
+                'Target_Safety_Stock',      # 新增
+                'Target_Diff',             # 新增
+                'Target_Safety_Stock_Days',  # 新增
+                'Target_Qty_Used',         # 新增
+                'Calculation_Mode',          # 新增
+                'Notes'                    # 新增
             ]
             # 只輸出存在的欄位
             existing_columns = [col for col in display_columns if col in df.columns]
-            df.to_excel(writer, sheet_name='Results', index=False, columns=existing_columns)
+            
+            # 確保 Article 欄位以文字格式輸出
+            df_copy = df.copy()
+            if 'Article' in df_copy.columns:
+                df_copy['Article'] = df_copy['Article'].astype(str)
+            
+            df_copy.to_excel(writer, sheet_name='Results', index=False, columns=existing_columns)
             
             # 統計摘要工作表 - 全體統計
             summary_data = {

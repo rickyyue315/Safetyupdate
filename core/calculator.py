@@ -32,7 +32,9 @@ from core.constants import (
     FIELD_RP_TYPE,
     FIELD_TARGET_QTY,
     FIELD_TARGET_SAFETY_STOCK,
-    FIELD_TARGET_SAFETY_STOCK_DAYS
+    FIELD_TARGET_SAFETY_STOCK_DAYS,
+    FIELD_SUGGESTED_DIFF,
+    FIELD_TARGET_DIFF
 )
 
 
@@ -279,6 +281,9 @@ class SafetyStockCalculator:
             notes_parts.append(f"計算模式：{calculation_mode}")
             notes = "\n".join(notes_parts)
             
+            # 計算 Suggested_Diff
+            suggested_diff = suggested_ss - (original_safety_stock if original_safety_stock is not None else 0)
+            
             # 返回 Target Qty 模式結果
             return {
                 "Article": article,
@@ -310,6 +315,9 @@ class SafetyStockCalculator:
                 # Target Safety Stock 欄位（預留給 Target Safety Stock 使用）
                 FIELD_TARGET_SAFETY_STOCK: 0,
                 FIELD_TARGET_SAFETY_STOCK_DAYS: 0,
+                # 差額欄位
+                FIELD_SUGGESTED_DIFF: suggested_diff,
+                FIELD_TARGET_DIFF: 0,
                 # 新增欄位
                 "RP Type": rp_type if rp_type is not None else "",
                 "Target_Qty_Used": True,
@@ -383,6 +391,9 @@ class SafetyStockCalculator:
         notes_parts.append(f"計算模式：{calculation_mode}")
         notes = "\n".join(notes_parts)
 
+        # 計算 Suggested_Diff
+        suggested_diff = suggested_ss - (original_safety_stock if original_safety_stock is not None else 0)
+
         # 返回所有結果
         return {
             "Article": article,
@@ -414,6 +425,9 @@ class SafetyStockCalculator:
             # Target Safety Stock 欄位（預留給 Target Safety Stock 使用）
             FIELD_TARGET_SAFETY_STOCK: 0,
             FIELD_TARGET_SAFETY_STOCK_DAYS: 0,
+            # 差額欄位
+            FIELD_SUGGESTED_DIFF: suggested_diff,
+            FIELD_TARGET_DIFF: 0,
             # 新增 RP Type 和 Notes 欄位
             "RP Type": rp_type if rp_type is not None else "",
             "Target_Qty_Used": False,
