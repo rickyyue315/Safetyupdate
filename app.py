@@ -149,8 +149,6 @@ def display_home_page():
     - **Supply Source**: 供應來源代碼（1, 2, 4 等）
     - **MOQ**: 最小訂購量
     - **Target Qty** (可選): 目標數量
-    
-    您可以下載 [範例資料檔案](data/input/sample_input.csv) 作為參考。
     """)
 
 
