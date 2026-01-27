@@ -2,7 +2,7 @@
 
 ## 需求概述
 
-新增功能以支援使用者在網頁介面輸入 SKU 層級的 Target Qty，並將其按店舖等級 (Class) 比例分配至各店鋪的 Safety Stock。
+新增功能以支援使用者在網頁介面輸入 SKU 層級的 Target Qty，並將其按店舖等級 (Class) 權重比例分配至各店鋪的 Safety Stock。
 
 ### 核心需求
 1. **輸入方式**：在網頁介面（計算頁面）直接輸入每個 SKU 的 Target Qty。
@@ -68,7 +68,10 @@ $$
 - **Notes**: 新增分配詳情（Target Qty, Class, Weight, Total Weight, Allocation Factor, Allocated SS）。
 
 ## 實施狀態
-- [x] 新增 `CLASS_WEIGHTS` 對照表
+- [x] 新增 `CLASS_CATEGORY_MAP` 對照表
 - [x] 修改 `calculate_safety_stock` 函數以支援按 Class 權重分配
+- [x] 更新 `config/settings.py` 以支援自訂權重
+- [x] 更新側邊欄 UI 以支援自訂權重
 - [x] 更新 UI 說明文字
 - [x] 更新 Notes 以顯示分配詳情
+- [x] 更新 README.md 文件

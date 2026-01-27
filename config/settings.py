@@ -15,7 +15,8 @@ class Settings:
         moq_multiplier: float = 1.25,
         moq_constraint_mode: str = "multiplier",
         shop_class_max_days: Optional[Dict[str, int]] = None,
-        use_target_qty_mode: bool = False
+        use_target_qty_mode: bool = False,
+        class_weights: Optional[Dict[str, int]] = None
     ):
         """
         初始化設定
@@ -26,12 +27,14 @@ class Settings:
             moq_constraint_mode: MOQ 約束模式（"multiplier" 或 "add_one"）
             shop_class_max_days: 按 Shop Class 設定的天數上限（可選）
             use_target_qty_mode: 是否使用 Target Qty 模式（預設 False）
+            class_weights: Class 權重設定（可選，預設 A=3, B=2, C=1, D=1）
         """
         self.max_safety_stock_days = max_safety_stock_days
         self.moq_multiplier = moq_multiplier
         self.moq_constraint_mode = moq_constraint_mode
         self.shop_class_max_days = shop_class_max_days or {}
         self.use_target_qty_mode = use_target_qty_mode
+        self.class_weights = class_weights or {"A": 3, "B": 2, "C": 1, "D": 1}
         
         # 驗證設定
         self._validate()
@@ -67,6 +70,18 @@ class Settings:
                 raise ValueError(
                     f"Shop Class {shop_class} 的 max_days 必須在 3-21 之間，當前值：{max_days}"
                 )
+        
+        # 驗證 class_weights
+        valid_class_categories = ["A", "B", "C", "D"]
+        for category, weight in self.class_weights.items():
+            if category not in valid_class_categories:
+                raise ValueError(
+                    f"無效的 Class 類別：{category}，有效值：{valid_class_categories}"
+                )
+            if weight <= 0:
+                raise ValueError(
+                    f"Class {category} 的權重必須大於 0，當前值：{weight}"
+                )
     
     def get_max_days_for_shop_class(self, shop_class: str) -> int:
         """
@@ -87,7 +102,8 @@ class Settings:
             "moq_multiplier": self.moq_multiplier,
             "moq_constraint_mode": self.moq_constraint_mode,
             "shop_class_max_days": self.shop_class_max_days,
-            "use_target_qty_mode": self.use_target_qty_mode
+            "use_target_qty_mode": self.use_target_qty_mode,
+            "class_weights": self.class_weights
         }
     
     @classmethod
@@ -98,7 +114,8 @@ class Settings:
             moq_multiplier=data.get("moq_multiplier", 1.25),  # type: ignore
             moq_constraint_mode=data.get("moq_constraint_mode", "multiplier"),  # type: ignore
             shop_class_max_days=data.get("shop_class_max_days", {}),  # type: ignore
-            use_target_qty_mode=data.get("use_target_qty_mode", False)  # type: ignore
+            use_target_qty_mode=data.get("use_target_qty_mode", False),  # type: ignore
+            class_weights=data.get("class_weights", {"A": 3, "B": 2, "C": 1, "D": 1})  # type: ignore
         )
     
     def save_to_file(self, file_path: str):
@@ -141,5 +158,6 @@ class Settings:
             f"Settings(max_safety_stock_days={self.max_safety_stock_days}, "
             f"moq_multiplier={self.moq_multiplier}, "
             f"moq_constraint_mode='{self.moq_constraint_mode}', "
-            f"use_target_qty_mode={self.use_target_qty_mode})"
+            f"use_target_qty_mode={self.use_target_qty_mode}, "
+            f"class_weights={self.class_weights})"
         )

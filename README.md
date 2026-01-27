@@ -30,10 +30,11 @@
 
 ### 3. Target Safety Stock 模式
 - 按店舖等級 (Class) 權重比例分配：
-  - Class A (AA, A1, A2, A3)：權重 3
-  - Class B (B1, B2)：權重 2
-  - Class C (C1, C2)：權重 1
-  - Class D (D1)：權重 1
+  - Class A (AA, A1, A2, A3)：權重 A
+  - Class B (B1, B2)：權重 B
+  - Class C (C1, C2)：權重 C
+  - Class D (D1)：權重 D
+- 預設權重：A=3, B=2, C=1, D=1（可在系統設定中自訂）
 - `Target_Safety_Stock_i = Weight_i × (SKU_Total_Target / Total_Weight)`
 - 系統會自動處理分配餘數，確保總和等於目標數量。
 
