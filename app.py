@@ -242,7 +242,14 @@ def display_settings_panel(settings: 'Settings') -> 'Settings':
         )
 
     # MOQ 約束設定
+    st.sidebar.markdown("---")
     st.sidebar.subheader("MOQ 約束設定")
+    moq_mode = st.sidebar.selectbox(
+        "MOQ 約束模式",
+        ["multiplier", "add_one"],
+        index=0 if settings.moq_constraint_mode == "multiplier" else 1,
+        help="選擇 MOQ 約束的計算模式"
+    )
     
     moq_multiplier = st.sidebar.number_input(
         "MOQ 約束乘數",
