@@ -284,13 +284,16 @@ def display_settings_panel(settings: 'Settings') -> 'Settings':
     st.sidebar.markdown("---")
     st.sidebar.subheader("RP Type 計算選項")
     
-    calculate_ss_for_all_rp_types = st.sidebar.radio(
+    rp_type_options = ["all", "rf"]
+    default_rp_option = "all" if settings.calculate_ss_for_all_rp_types else "rf"
+    selected_rp_option = st.sidebar.radio(
         "Safety Stock 計算範圍",
-        options=[True, False],
-        format_func=lambda x: "計算所有 RP Type（ND + RF）" if x else "僅計算 RF 型",
-        value=settings.calculate_ss_for_all_rp_types,
+        options=rp_type_options,
+        format_func=lambda x: "計算所有 RP Type（ND + RF）" if x == "all" else "僅計算 RF 型",
+        index=rp_type_options.index(default_rp_option),
         help="選擇是計算所有 RP Type 的 Safety Stock，還是僅計算 RF 型的 Safety Stock"
     )
+    calculate_ss_for_all_rp_types = selected_rp_option == "all"
     
     if not calculate_ss_for_all_rp_types:
         st.sidebar.info(
