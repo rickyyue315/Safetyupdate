@@ -1,5 +1,5 @@
-- **系統名稱**  
-  Safety(Buffer) Stock Calculation v2.0  
+- **系統名稱**
+  Safety(Buffer) Stock Calculation v2.1
   安全(緩衝)庫存計算機
 
 - **系統目的**  

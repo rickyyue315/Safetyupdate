@@ -45,7 +45,7 @@ def save_settings(settings: 'Settings'):
 
 def display_home_page():
     """顯示首頁"""
-    st.title("📦 安全(緩衝)庫存計算機 v2.0")
+    st.title("📦 安全(緩衝)庫存計算機 v2.4")
     st.markdown("---")
     
     st.markdown("""
@@ -71,6 +71,8 @@ def display_home_page():
         
         6. **在 Excel 內新增 Class (店舖級別)**：手動新增店舖等級欄位
         
+        7. **Excel 必須刪除 D001**：刪除 D001 門市的資料
+        
         ---
         
         ### 店舖級別說明
@@ -88,6 +90,7 @@ def display_home_page():
     ### 核心功能
     
     - **智能計算**: 根據平均日銷量、前置時間和合併因素計算安全庫存
+    - **Launch Date 驗證**: 根據商品實際上市日期調整計算邏輯，當商品上市時間短於計算週期時，使用實際天數計算平均日銷量，提供更精確的安全庫存建議
     - **MOQ 約束**: 自動套用最小訂購量約束（支援乘數模式和加 1 模式）
     - **天數上限**: 支援自訂安全庫存天數上限（7-14 天）
     - **Target Qty 模式**: 支援直接使用輸入資料中的 `Target Qty` 作為安全庫存
@@ -102,10 +105,25 @@ def display_home_page():
     2. **套用 MOQ 約束**: SS_after_MOQ = max(SS_preliminary, MOQ × multiplier)
     3. **套用天數上限**: Suggested_Safety_Stock = min(SS_after_MOQ, Avg_Daily_Sales × Max_Days)
     
-    #### 2. Target Qty 模式
+    #### 2. Launch Date 影響計算
+    當商品提供 Launch Date（上市日期）時，系統會檢測是否需要調整計算邏輯：
+    - **啟動條件**: 當 Launch Date 到參考日期的實際天數 **少於** 計算總天數時
+    - **計算公式**:
+      ```
+      days_since_launch = (參考日期 - Launch Date).days + 1
+      Avg_Daily_Sales = (MTD_Qty + Last_Month_Qty + Last_2_Month_Qty) / days_since_launch
+      ```
+    - **範例**（參考日期 2026-01-26，Launch Date 2026-01-21）：
+      - 標準總天數 = 87 天（26 + 31 + 30）
+      - 實際天數 = 6 天（1/21 到 1/26）
+      - 由於 6 < 87，使用實際天數計算
+      - Avg = (20 + 100 + 150) / 6 = 270 / 6 = 45.0
+    - **Notes 提示**: 系統會在 Notes 欄位中顯示「Launch Date 影響計算，只計算Launch Date到參考日期的實際天數」
+    
+    #### 3. Target Qty 模式
     - 直接使用輸入資料中的 `Target Qty` 作為安全庫存值。
     
-    #### 3. Target Safety Stock 模式
+    #### 4. Target Safety Stock 模式
     - 根據輸入的 SKU 總目標數量，按標準模式計算出的比例分配至各店舖。
     
     ### Class 權重說明
@@ -148,7 +166,29 @@ def display_home_page():
     - **Last 2 Month Sold Qty**: 前兩個月銷量總和
     - **Supply Source**: 供應來源代碼（1, 2, 4 等）
     - **MOQ**: 最小訂購量
+    - **MCH2**: MCH2 值（必須欄位）
     - **Target Qty** (可選): 目標數量
+    - **Launch Date** (可選): 商品上市日期（格式：yyyy-MM-dd）
+    
+    ---
+    
+    ## 系統功能
+    
+    **v2.4 新增功能**：
+    - ✅ RP Type 計算選項：支援「計算所有 RP Type」或「僅計算 RF 型」兩種計算模式
+      - 計算所有 RP Type：無論 RP Type 為 ND 或 RF，都計算 Safety Stock（預設行為）
+      - 僅計算 RF 型：只計算 RP Type 為 RF 的商品，ND 型商品使用原始 Safety Stock
+    
+    **v2.3 保留功能**：
+    - ✅ MCH2 最低安全庫存要求：當 MCH2 欄位為 "0302" 時，根據 Shop Class 應用最低安全庫存要求
+      - Shop Class AA, A1, A2, A3：≥ 12 件
+      - Shop Class B1, B2：≥ 10 件
+      - Shop Class C1, C2, D1：≥ 6 件
+    
+    **v2.2 保留功能**：
+    - ✅ Launch Date 驗證功能：根據商品實際上市日期調整安全庫存計算，當商品上市時間短於計算週期時，使用實際天數計算平均日銷量，提供更精確的安全庫存建議
+    - ✅ Target Qty 模式：支援直接使用輸入資料中的 `Target Qty` 作為安全庫存
+    - ✅ Target Safety Stock 模式：支援輸入 SKU 總目標數量，系統自動按比例分配至各店舖
     """)
 
 
@@ -242,6 +282,27 @@ def display_settings_panel(settings: 'Settings') -> 'Settings':
     
     # Class 權重設定
     st.sidebar.markdown("---")
+    st.sidebar.subheader("RP Type 計算選項")
+    
+    calculate_ss_for_all_rp_types = st.sidebar.radio(
+        "Safety Stock 計算範圍",
+        options=[True, False],
+        format_func=lambda x: "計算所有 RP Type（ND + RF）" if x else "僅計算 RF 型",
+        value=settings.calculate_ss_for_all_rp_types,
+        help="選擇是計算所有 RP Type 的 Safety Stock，還是僅計算 RF 型的 Safety Stock"
+    )
+    
+    if not calculate_ss_for_all_rp_types:
+        st.sidebar.info(
+            "ℹ️ **RP Type 過濾說明**\n\n"
+            "選擇「僅計算 RF 型」時：\n"
+            "• RP Type = RF 的商品：正常計算 Safety Stock\n"
+            "• RP Type = ND 的商品：使用原始 Safety Stock（不計算）\n"
+            "• RP Type 缺失或其他值：正常計算 Safety Stock"
+        )
+    
+    # Class 權重設定
+    st.sidebar.markdown("---")
     st.sidebar.subheader("Class 權重設定")
     st.sidebar.markdown("**用於 SKU 目標數量分配**")
     
@@ -287,7 +348,8 @@ def display_settings_panel(settings: 'Settings') -> 'Settings':
         moq_constraint_mode=moq_mode,
         shop_class_max_days=shop_class_max_days if enable_custom_max_days else {},
         use_target_qty_mode=use_target_qty_mode,
-        class_weights=class_weights
+        class_weights=class_weights,
+        calculate_ss_for_all_rp_types=calculate_ss_for_all_rp_types
     )
     
     # 按鈕區域
@@ -319,7 +381,8 @@ def display_file_uploader():
     返回:
         上傳的 DataFrame，如果未上傳則返回 None
     """
-    from core.data_processor import DataProcessor
+    import pandas as pd
+    from core.data_processor import DataProcessor, DateCalculator
     
     st.subheader("📤 上傳資料檔案")
     
@@ -342,6 +405,13 @@ def display_file_uploader():
             # 驗證必要欄位
             if DataProcessor.validate_required_columns(df):
                 st.success(f"✅ 成功載入 {len(df)} 筆記錄")
+                
+                # 初始化 session state 的日期相關變數
+                if 'selected_date' not in st.session_state:
+                    st.session_state.selected_date = pd.Timestamp.now(tz='Asia/Hong_Kong').date() - pd.Timedelta(days=1)
+                if 'date_params' not in st.session_state:
+                    st.session_state.date_params = None
+                
                 return df
             else:
                 missing = DataProcessor.get_missing_columns(df)
@@ -353,6 +423,104 @@ def display_file_uploader():
             return None
     
     return None
+
+
+def display_date_selector():
+    """
+    顯示日期選擇介面
+    
+    返回:
+        (selected_date, date_params) 或 (None, None)
+    """
+    import pandas as pd
+    from core.data_processor import DateCalculator
+    from core.constants import (
+        FIELD_SELECTED_DATE,
+        FIELD_MTD_DAYS,
+        FIELD_LAST_MONTH_DAYS,
+        FIELD_LAST_2_MONTH_DAYS
+    )
+    
+    st.markdown("---")
+    st.subheader("📅 日期設定與計算參數")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        st.markdown("**選擇參考日期**")
+        selected_date = st.date_input(
+            "選擇參考日期",
+            value=st.session_state.get('selected_date', pd.Timestamp.now(tz='Asia/Hong_Kong').date() - pd.Timedelta(days=1)),
+            help="選擇計算參考日期（預設為前1日 T-1）"
+        )
+    
+    with col2:
+        st.markdown("**日期計算說明**")
+        st.info(
+            "💡 **計算方式**\n\n"
+            "系統會根據選定日期自動計算：\n"
+            "• MTD 天數（當月已過天數）\n"
+            "• 上月天數\n"
+            "• 前兩月天數\n\n"
+            "然後使用加權平均公式計算平均日銷量"
+        )
+    
+    # 計算日期參數
+    date_params = None
+    if selected_date:
+        try:
+            date_params = DateCalculator.calculate_date_parameters(selected_date)
+            st.session_state.selected_date = selected_date
+            st.session_state.date_params = date_params
+            
+            # 顯示計算參數摘要
+            st.markdown("---")
+            st.subheader("📊 計算參數摘要")
+            
+            col_a, col_b = st.columns(2)
+            
+            with col_a:
+                st.markdown("**日期信息**")
+                st.markdown(f"- 選定日期：`{date_params[FIELD_SELECTED_DATE]}`")
+                st.markdown(f"- 當月({date_params['current_month']}月)天數：**{date_params[FIELD_MTD_DAYS]} 天**")
+                st.markdown(f"- 上月({date_params['last_month']}月)天數：**{date_params[FIELD_LAST_MONTH_DAYS]} 天**")
+                st.markdown(f"- 前兩月({date_params['last_2_month']}月)天數：**{date_params[FIELD_LAST_2_MONTH_DAYS]} 天**")
+            
+            with col_b:
+                st.markdown("**計算公式**")
+                st.markdown("**加權平均公式**")
+                st.markdown("```")
+                st.markdown("Avg_Daily_Sales = (MTD_Qty + Last_Month_Qty + Last_2_Month_Qty) / ")
+                st.markdown("                      (MTD_Days + Last_Month_Days + Last_2_Month_Days)")
+                st.markdown("```")
+                st.markdown("")
+                st.markdown("**範例**")
+                mtd_qty = 26
+                last_month_qty = 100
+                last_2_month_qty = 90
+                total_days = date_params[FIELD_MTD_DAYS] + date_params[FIELD_LAST_MONTH_DAYS] + date_params[FIELD_LAST_2_MONTH_DAYS]
+                total_qty = mtd_qty + last_month_qty + last_2_month_qty
+                avg_sales = total_qty / total_days
+                st.markdown(f"假設銷量：MTD={mtd_qty}件, 上月={last_month_qty}件, 前兩月={last_2_month_qty}件")
+                st.markdown("")
+                st.markdown(f"計算：({mtd_qty}件 + {last_month_qty}件 + {last_2_month_qty}件) / ({date_params[FIELD_MTD_DAYS]}天 + {date_params[FIELD_LAST_MONTH_DAYS]}天 + {date_params[FIELD_LAST_2_MONTH_DAYS]}天)")
+                st.markdown(f"      = {total_qty}件 / {total_days}天")
+                st.markdown(f"      = **{avg_sales:.2f}件/天**")
+                
+                # 顯示數據驗證
+                st.markdown("")
+                st.markdown("✅ **數據驗證**")
+                st.markdown("- 系統已驗證數據完整性")
+                st.markdown("- MTD/上月/前兩月銷量將從 Excel 資料中提取")
+                st.markdown("- 計算方式已設定為：**日期感知加權平均**")
+            
+            return selected_date, date_params
+            
+        except Exception as e:
+            st.error(f"❌ 計算日期參數時發生錯誤：{str(e)}")
+            return None, None
+    
+    return None, None
 
 
 def display_results_summary(results_df: 'pd.DataFrame'):
@@ -412,6 +580,13 @@ def display_results_summary(results_df: 'pd.DataFrame'):
         'Target_Safety_Stock_Days',  # 新增
         'Target_Qty_Used',         # 新增
         'Calculation_Mode',          # 新增
+        'Selected_Date',            # 新增日期相關欄位
+        'MTD_Days',                # 新增日期相關欄位
+        'Last_Month_Days',         # 新增日期相關欄位
+        'Last_2_Month_Days',       # 新增日期相關欄位
+        'MCH2',                   # 新增 MCH2 欄位
+        'MCH2_Minimum_Required', # 新增 MCH2 最低要求
+        'MCH2_Minimum_SS_Applied',  # 新增 MCH2 約束應用標記
         'Notes'                    # 新增
     ]
     
@@ -477,6 +652,13 @@ def display_download_buttons(results_df: 'pd.DataFrame'):
                 'Target_Safety_Stock_Days',  # 新增
                 'Target_Qty_Used',         # 新增
                 'Calculation_Mode',          # 新增
+                'Selected_Date',            # 新增日期相關欄位
+                'MTD_Days',                # 新增日期相關欄位
+                'Last_Month_Days',         # 新增日期相關欄位
+                'Last_2_Month_Days',       # 新增日期相關欄位
+                'MCH2',                   # 新增 MCH2 欄位
+                'MCH2_Minimum_Required', # 新增 MCH2 最低要求
+                'MCH2_Minimum_SS_Applied', # 新增 MCH2 約束應用標記
                 'Notes'                    # 新增
             ]
             # 只輸出存在的欄位
@@ -581,7 +763,15 @@ CLASS_CATEGORY_MAP = {
 }
 
 
-def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets: dict = None) -> 'pd.DataFrame':
+def calculate_safety_stock(
+    df: 'pd.DataFrame',
+    settings: 'Settings',
+    sku_targets: dict = None,
+    selected_date: str = None,
+    mtd_days: int = None,
+    last_month_days: int = None,
+    last_2_month_days: int = None
+) -> 'pd.DataFrame':
     """
     對資料執行安全庫存計算
     
@@ -589,6 +779,10 @@ def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets
         df: 輸入資料 DataFrame
         settings: 系統設定
         sku_targets: SKU 目標數量字典 {sku: target_qty}
+        selected_date: 選定的參考日期（可選）
+        mtd_days: MTD 天數（可選）
+        last_month_days: 上月天數（可選）
+        last_2_month_days: 前兩月天數（可選）
         
     返回:
         包含計算結果的 DataFrame
@@ -621,7 +815,13 @@ def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets
                 product_hierarchy=record.get('Product Hierarchy'),
                 article_description=record.get('Article Description'),
                 rp_type=record.get('RP Type'),
-                target_qty=record.get('Target Qty')
+                target_qty=record.get('Target Qty'),
+                selected_date=selected_date,
+                mtd_days=mtd_days,
+                last_month_days=last_month_days,
+                last_2_month_days=last_2_month_days,
+                launch_date=record.get('Launch Date'),
+                mch2=record.get('MCH2')
             )
             results.append(result)
         except Exception as e:
@@ -721,6 +921,12 @@ def calculate_safety_stock(df: 'pd.DataFrame', settings: 'Settings', sku_targets
 def main():
     """主程式"""
     import pandas as pd
+    from core.constants import (
+        FIELD_SELECTED_DATE,
+        FIELD_MTD_DAYS,
+        FIELD_LAST_MONTH_DAYS,
+        FIELD_LAST_2_MONTH_DAYS
+    )
     
     # 初始化 session state
     if 'results_df' not in st.session_state:
@@ -750,6 +956,9 @@ def main():
         
         # 如果有資料，顯示計算按鈕
         if df is not None:
+            # 顯示日期選擇器
+            selected_date, date_params = display_date_selector()
+            
             st.markdown("---")
             
             # 顯示資料預覽
@@ -765,6 +974,7 @@ def main():
             # 檢查可選欄位是否存在
             has_product_hierarchy = 'Product Hierarchy' in df.columns
             has_article_description = 'Article Description' in df.columns
+            has_mch2 = 'MCH2' in df.columns
             
             # 準備 SKU 編輯表格
             unique_skus = sorted(df['Article'].unique().astype(str))
@@ -781,21 +991,27 @@ def main():
                     # 從第一行提取資料
                     product_hierarchy = sku_first_row['Product Hierarchy'] if has_product_hierarchy else ""
                     article_description = sku_first_row['Article Description'] if has_article_description else ""
+                    mch2_value = sku_first_row['MCH2'] if has_mch2 else ""
                     
                     # 處理 NaN 值
                     if pd.isna(product_hierarchy):
                         product_hierarchy = ""
                     if pd.isna(article_description):
                         article_description = ""
+                    if pd.isna(mch2_value):
+                        mch2_value = ""
+                    
                 else:
                     # 如果沒有找到該 SKU 的資料，使用空值
                     product_hierarchy = ""
                     article_description = ""
+                    mch2_value = ""
                 
                 sku_target_data.append({
                     "SKU": sku,
                     "Product Hierarchy": product_hierarchy,
                     "Article Description": article_description,
+                    "MCH2": mch2_value,
                     "Target Qty": 0
                 })
             
@@ -829,6 +1045,13 @@ def main():
                     help="商品描述"
                 )
             
+            if has_mch2:
+                column_config["MCH2"] = st.column_config.TextColumn(
+                    "MCH2",
+                    disabled=True,
+                    help="MCH2 值"
+                )
+            
             # 顯示編輯器
             edited_sku_df = st.data_editor(
                 sku_target_df,
@@ -850,7 +1073,13 @@ def main():
             # 計算按鈕
             if st.button("🚀 開始計算", type="primary", use_container_width=True):
                 with st.spinner("正在計算中..."):
-                    results_df = calculate_safety_stock(df, settings, sku_targets)
+                    results_df = calculate_safety_stock(
+                        df, settings, sku_targets,
+                        selected_date=date_params[FIELD_SELECTED_DATE] if date_params else None,
+                        mtd_days=date_params[FIELD_MTD_DAYS] if date_params else None,
+                        last_month_days=date_params[FIELD_LAST_MONTH_DAYS] if date_params else None,
+                        last_2_month_days=date_params[FIELD_LAST_2_MONTH_DAYS] if date_params else None
+                    )
                     
                     if len(results_df) > 0:
                         # 保存到 session state
@@ -869,3 +1098,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# 底部標註
+st.markdown("---")
+st.markdown("**安全(緩衝)庫存計算機 Safety (Buffer) Stock Calculator (2026) - For RP team (Build up by Ricky Yue)**")

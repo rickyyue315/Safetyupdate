@@ -19,6 +19,23 @@ MF_TABLE: Dict[str, Dict[str, float]] = {
 }
 
 
+# MCH2 最低安全庫存要求映射表
+# 當 MCH2 欄位值為特定值時，對應 Shop Class 的最低安全庫存要求
+MCH2_MINIMUM_SS_MAP: Dict[str, Dict[str, int]] = {
+    "0302": {
+        "AA": 12,
+        "A1": 12,
+        "A2": 12,
+        "A3": 12,
+        "B1": 10,
+        "B2": 10,
+        "C1": 6,
+        "C2": 6,
+        "D1": 6
+    }
+}
+
+
 # Supply Source 對應的前置時間表（天數）
 # "1" 或 "4" → 7 天（行貨）
 # "2" → 3 天（倉貨）
@@ -57,6 +74,8 @@ FIELD_PRODUCT_HIERARCHY = "Product Hierarchy"
 FIELD_ARTICLE_DESCRIPTION = "Article Description"
 FIELD_RP_TYPE = "RP Type"
 FIELD_TARGET_QTY = "Target Qty"
+FIELD_LAUNCH_DATE = "Launch Date"
+FIELD_MCH2 = "MCH2"
 
 
 # 輸出欄位名稱
@@ -80,6 +99,19 @@ FIELD_SUGGESTED_DIFF = "Suggested_Diff"
 FIELD_TARGET_DIFF = "Target_Diff"
 
 
+# 日期感知計算相關欄位
+FIELD_SELECTED_DATE = "Selected_Date"
+FIELD_MTD_DAYS = "MTD_Days"
+FIELD_LAST_MONTH_DAYS = "Last_Month_Days"
+FIELD_LAST_2_MONTH_DAYS = "Last_2_Month_Days"
+FIELD_CALCULATION_METHOD = "Calculation_Method"
+
+
+# 計算方法常數
+CALCULATION_METHOD_DATE_BASED = "Date-Based Weighted Average"
+CALCULATION_METHOD_STANDARD = "Standard (60 Days)"
+
+
 # 約束類型
 CONSTRAINT_NONE = "無"
 CONSTRAINT_MOQ = "MOQ"
@@ -101,7 +133,8 @@ REQUIRED_INPUT_FIELDS = [
     FIELD_LAST_MONTH_SOLD_QTY,
     FIELD_LAST_2_MONTH_SOLD_QTY,
     FIELD_SUPPLY_SOURCE,
-    FIELD_MOQ
+    FIELD_MOQ,
+    FIELD_MCH2
 ]
 
 
@@ -164,4 +197,10 @@ COLUMN_NAME_ALIASES: Dict[str, str] = {
     "Target Quantity": FIELD_TARGET_QTY,
     "Target quantity": FIELD_TARGET_QTY,
     "target quantity": FIELD_TARGET_QTY,
+
+    # Launch Date 的變體
+    "Launch Date": FIELD_LAUNCH_DATE,
+    "Launch date": FIELD_LAUNCH_DATE,
+    "launch date": FIELD_LAUNCH_DATE,
+    "launch Date": FIELD_LAUNCH_DATE,
 }

@@ -16,7 +16,8 @@ class Settings:
         moq_constraint_mode: str = "multiplier",
         shop_class_max_days: Optional[Dict[str, int]] = None,
         use_target_qty_mode: bool = False,
-        class_weights: Optional[Dict[str, int]] = None
+        class_weights: Optional[Dict[str, int]] = None,
+        calculate_ss_for_all_rp_types: bool = True
     ):
         """
         初始化設定
@@ -28,6 +29,7 @@ class Settings:
             shop_class_max_days: 按 Shop Class 設定的天數上限（可選）
             use_target_qty_mode: 是否使用 Target Qty 模式（預設 False）
             class_weights: Class 權重設定（可選，預設 A=3, B=2, C=1, D=1）
+            calculate_ss_for_all_rp_types: 是否計算所有RP Type的Safety Stock（預設 True；False時僅計算RF）
         """
         self.max_safety_stock_days = max_safety_stock_days
         self.moq_multiplier = moq_multiplier
@@ -35,6 +37,7 @@ class Settings:
         self.shop_class_max_days = shop_class_max_days or {}
         self.use_target_qty_mode = use_target_qty_mode
         self.class_weights = class_weights or {"A": 3, "B": 2, "C": 1, "D": 1}
+        self.calculate_ss_for_all_rp_types = calculate_ss_for_all_rp_types
         
         # 驗證設定
         self._validate()
@@ -103,7 +106,8 @@ class Settings:
             "moq_constraint_mode": self.moq_constraint_mode,
             "shop_class_max_days": self.shop_class_max_days,
             "use_target_qty_mode": self.use_target_qty_mode,
-            "class_weights": self.class_weights
+            "class_weights": self.class_weights,
+            "calculate_ss_for_all_rp_types": self.calculate_ss_for_all_rp_types
         }
     
     @classmethod
@@ -115,7 +119,8 @@ class Settings:
             moq_constraint_mode=data.get("moq_constraint_mode", "multiplier"),  # type: ignore
             shop_class_max_days=data.get("shop_class_max_days", {}),  # type: ignore
             use_target_qty_mode=data.get("use_target_qty_mode", False),  # type: ignore
-            class_weights=data.get("class_weights", {"A": 3, "B": 2, "C": 1, "D": 1})  # type: ignore
+            class_weights=data.get("class_weights", {"A": 3, "B": 2, "C": 1, "D": 1}),  # type: ignore
+            calculate_ss_for_all_rp_types=data.get("calculate_ss_for_all_rp_types", True)  # type: ignore
         )
     
     def save_to_file(self, file_path: str):
@@ -158,6 +163,7 @@ class Settings:
             f"Settings(max_safety_stock_days={self.max_safety_stock_days}, "
             f"moq_multiplier={self.moq_multiplier}, "
             f"moq_constraint_mode='{self.moq_constraint_mode}', "
-            f"use_target_qty_mode={self.use_target_qty_mode}, "
+            f"ualculate_ss_for_all_rp_types={self.calculate_ss_for_all_rp_types}, "
+            f"cse_target_qty_mode={self.use_target_qty_mode}, "
             f"class_weights={self.class_weights})"
         )

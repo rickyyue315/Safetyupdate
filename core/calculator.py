@@ -3,6 +3,7 @@ Core calculation module for Safety(Buffer) Stock Calculation
 """
 import math
 from typing import Dict, Any, Tuple, Optional
+from datetime import date, datetime
 from config.settings import Settings
 from core.constants import (
     MF_TABLE,
@@ -34,7 +35,15 @@ from core.constants import (
     FIELD_TARGET_SAFETY_STOCK,
     FIELD_TARGET_SAFETY_STOCK_DAYS,
     FIELD_SUGGESTED_DIFF,
-    FIELD_TARGET_DIFF
+    FIELD_TARGET_DIFF,
+    FIELD_LAUNCH_DATE,
+    FIELD_SELECTED_DATE,
+    FIELD_MTD_DAYS,
+    FIELD_LAST_MONTH_DAYS,
+    FIELD_LAST_2_MONTH_DAYS,
+    FIELD_MCH2,
+    MCH2_MINIMUM_SS_MAP,
+    CALCULATION_METHOD_DATE_BASED
 )
 
 
@@ -69,6 +78,68 @@ class SafetyStockCalculator:
         """
         avg_daily_sales = (last_month_qty + last_2_month_qty) / 60
         return round(avg_daily_sales, 2)
+    
+    def calculate_avg_daily_sales_with_date(
+        self,
+        mtd_qty: float,
+        last_month_qty: float,
+        last_2_month_qty: float,
+        mtd_days: int,
+        last_month_days: int,
+        last_2_month_days: int,
+        selected_date: Optional[date] = None,
+        launch_date: Optional[date] = None
+    ) -> Tuple[float, bool]:
+        """
+        基於日期計算平均日銷量（加權平均）
+        
+        公式：Avg_Daily_Sales = (MTD_Qty + Last_Month_Qty + Last_2_Month_Qty) /
+                                    (MTD_Days + Last_Month_Days + Last_2_Month_Days)
+        
+        如果 Launch Date 存在且 Launch Date 到參考日期的天數少於總天數，
+        則只計算 Launch Date 到參考日期的實際天數。
+        
+        參數:
+            mtd_qty: 本月至今銷量
+            last_month_qty: 上個月銷量
+            last_2_month_qty: 前兩個月銷量總和
+            mtd_days: 本月已過天數
+            last_month_days: 上月總天數
+            last_2_month_days: 前兩個月總天數
+            selected_date: 選定的參考日期
+            launch_date: 商品上市日期
+            
+        返回:
+            (平均日銷量, 是否受 Launch Date 影響)
+            平均日銷量（保留 2 位小數）
+        """
+        total_days = mtd_days + last_month_days + last_2_month_days
+        
+        if total_days <= 0:
+            return 0.0, False
+        
+        total_qty = mtd_qty + last_month_qty + last_2_month_qty
+        
+        # 檢查 Launch Date 是否影響計算
+        launch_date_affected = False
+        actual_days = total_days
+        
+        if selected_date is not None and launch_date is not None:
+            # Launch Date 已在呼叫處轉換為 date 類型
+            # 計算 Launch Date 到參考日期的天數
+            days_since_launch = (selected_date - launch_date).days + 1  # +1 包含 Launch Date 當天
+            
+            # 如果 Launch Date 到參考日期的天數少於總天數，使用實際天數
+            if days_since_launch < total_days:
+                actual_days = days_since_launch
+                launch_date_affected = True
+        
+        if actual_days <= 0:
+            return 0.0, launch_date_affected
+        
+        avg_daily_sales = total_qty / actual_days
+        
+        return round(avg_daily_sales, 2), launch_date_affected
     
     def determine_lead_time(self, supply_source: str) -> int:
         """
@@ -218,6 +289,61 @@ class SafetyStockCalculator:
         safety_stock_days = suggested_ss / avg_daily_sales
         return round(safety_stock_days, 2)
     
+    def apply_mch2_minimum_requirement(
+        self,
+        suggested_ss: float,
+        mch2: Optional[str],
+        shop_class: str
+    ) -> Tuple[float, bool, int]:
+        """
+        套用 MCH2 最低安全庫存要求
+        
+        當 MCH2 為 "0302" 時，根據 Shop Class 應用最低安全庫存要求
+        
+        參數:
+            suggested_ss: 建議安全庫存
+            mch2: MCH2 欄位值（可以是字串或數字）
+            shop_class: 店舖等級
+            
+        返回:
+            (adjusted_ss, mch2_constraint_applied, mch2_minimum_required)
+            adjusted_ss: 調整後的安全庫存
+            mch2_constraint_applied: 是否應用了 MCH2 約束
+            mch2_minimum_required: MCH2 最低要求值（若不適用則為 0）
+        """
+        # 將 MCH2 轉為字串並去除空白
+        mch2_str = str(mch2).strip() if mch2 is not None else ""
+        shop_class_upper = shop_class.upper() if shop_class else ""
+        
+        # 處理 MCH2 值：將 302 轉換為 0302，將 "0302" 保持為 "0302"
+        if mch2_str == "302":
+            mch2_str = "0302"
+        elif mch2_str.isdigit() and len(mch2_str) == 3:
+            # 如果是 3 位數字，自動補零成 4 位
+            mch2_str = mch2_str.zfill(4)
+        
+        # 檢查 MCH2 是否為 "0302"
+        if mch2_str != "0302":
+            return suggested_ss, False, 0
+        
+        # 檢查該 MCH2 值是否有定義最低要求
+        if mch2_str not in MCH2_MINIMUM_SS_MAP:
+            return suggested_ss, False, 0
+        
+        # 檢查 Shop Class 是否有定義最低要求
+        mch2_requirements = MCH2_MINIMUM_SS_MAP[mch2_str]
+        if shop_class_upper not in mch2_requirements:
+            return suggested_ss, False, 0
+        
+        # 取得最低要求值
+        minimum_required = mch2_requirements[shop_class_upper]
+        
+        # 比較建議值與最低要求，取較大值
+        adjusted_ss = max(suggested_ss, minimum_required)
+        mch2_constraint_applied = adjusted_ss > suggested_ss
+        
+        return adjusted_ss, mch2_constraint_applied, minimum_required
+    
     def calculate_safety_stock(
         self,
         article: str,
@@ -232,7 +358,13 @@ class SafetyStockCalculator:
         product_hierarchy: Optional[str] = None,
         article_description: Optional[str] = None,
         rp_type: Optional[str] = None,
-        target_qty: Optional[float] = None
+        target_qty: Optional[float] = None,
+        selected_date: Optional[str] = None,
+        mtd_days: Optional[int] = None,
+        last_month_days: Optional[int] = None,
+        last_2_month_days: Optional[int] = None,
+        launch_date: Optional[date] = None,
+        mch2: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         執行完整的安全庫存計算流程
@@ -248,15 +380,113 @@ class SafetyStockCalculator:
             original_safety_stock: 原始安全庫存（可選）
             mtd_sold_qty: 本月至今銷量（可選）
             target_qty: 目標數量（可選，如果存在則直接使用）
+            selected_date: 選定的參考日期（可選）
+            mtd_days: MTD 天數（可選）
+            last_month_days: 上月天數（可選）
+            last_2_month_days: 前兩月天數（可選）
             
         返回:
             包含所有中間結果和最終結果的字典
         """
+        # 步驟 0：檢查 RP Type 過濾條件
+        # 如果設定為「僅計算 RF」且 RP Type 為 ND，則跳過計算
+        if not self.settings.calculate_ss_for_all_rp_types:
+            rp_type_upper = (rp_type.strip().upper() if rp_type else "").strip()
+            if rp_type_upper == "ND":
+                # RP Type 為 ND，且設定為「僅計算 RF」，則使用原始 Safety Stock
+                safety_stock_days = round(original_safety_stock / (self.calculate_avg_daily_sales(last_month_qty, last_2_month_qty) if self.calculate_avg_daily_sales(last_month_qty, last_2_month_qty) > 0 else 1), 2) if original_safety_stock is not None else 0
+                avg_daily_sales = self.calculate_avg_daily_sales(last_month_qty, last_2_month_qty)
+                
+                notes = f"計算步驟（跳過計算）：\n由於 RP Type = ND，且系統設定為「僅計算 RF」，本行使用原始 Safety Stock = {original_safety_stock if original_safety_stock is not None else 0}"
+                
+                return {
+                    "Article": article,
+                    "Site": site,
+                    "Class": shop_class,
+                    FIELD_RP_TYPE: rp_type if rp_type is not None else "",
+                    FIELD_ORIGINAL_SAFETY_STOCK: original_safety_stock if original_safety_stock is not None else 0,
+                    FIELD_MTD_SOLD_QTY: mtd_sold_qty if mtd_sold_qty is not None else 0,
+                    "Last_Month_Sold_Qty": last_month_qty,
+                    "Last_2_Month_Sold_Qty": last_2_month_qty,
+                    FIELD_PRODUCT_HIERARCHY: product_hierarchy if product_hierarchy is not None else "",
+                    FIELD_ARTICLE_DESCRIPTION: article_description if article_description is not None else "",
+                    FIELD_AVG_DAILY_SALES: avg_daily_sales,
+                    FIELD_LEAD_TIME_DAYS: 0,
+                    FIELD_MF_USED: 0,
+                    FIELD_MF_SERVICE_LEVEL: 0,
+                    FIELD_PRELIMINARY_SS: 0,
+                    FIELD_SS_AFTER_MOQ: 0,
+                    FIELD_USER_MAX_DAYS_APPLIED: 0,
+                    FIELD_SUGGESTED_SAFETY_STOCK: original_safety_stock if original_safety_stock is not None else 0,
+                    FIELD_CONSTRAINT_APPLIED: "RP Type Filter (ND)",
+                    FIELD_SAFETY_STOCK_DAYS: safety_stock_days,
+                    "Preliminary_SS_Days": 0,
+                    "SS_after_MOQ_Days": 0,
+                    "Suggested_SS_Days": safety_stock_days,
+                    FIELD_ORIGINAL_SAFETY_STOCK_DAYS: safety_stock_days,
+                    FIELD_TARGET_SAFETY_STOCK: 0,
+                    FIELD_TARGET_SAFETY_STOCK_DAYS: 0,
+                    FIELD_SUGGESTED_DIFF: 0,
+                    FIELD_TARGET_DIFF: 0,
+                    "RP Type": rp_type if rp_type is not None else "",
+                    "Target_Qty_Used": False,
+                    "Calculation_Mode": "Skipped (RP Type=ND)",
+                    "Notes": notes
+                }
+        
         # 步驟 1：計算平均日銷量
-        avg_daily_sales = self.calculate_avg_daily_sales(
-            last_month_qty,
-            last_2_month_qty
+        # 檢查是否使用日期感知計算
+        use_date_based_calculation = (
+            selected_date is not None and
+            mtd_days is not None and
+            last_month_days is not None and
+            last_2_month_days is not None and
+            mtd_sold_qty is not None
         )
+
+        # 準備參考日期對象
+        selected_date_obj = None
+        if selected_date is not None:
+            selected_date_obj = datetime.strptime(selected_date, '%Y-%m-%d').date()
+
+        # 處理 Launch Date（確保是 date 類型）
+        launch_date_converted = None
+        if launch_date is not None:
+            # 如果是 Timestamp，轉換為 date
+            if isinstance(launch_date, date) and not isinstance(launch_date, datetime):
+                launch_date_converted = launch_date
+            elif isinstance(launch_date, datetime):
+                launch_date_converted = launch_date.date()
+            else:
+                # 嘗試使用 .date() 方法（針對 pandas Timestamp）
+                try:
+                    launch_date_converted = launch_date.date()
+                except (AttributeError, TypeError):
+                    launch_date_converted = launch_date
+
+        # 初始化 Launch Date 影響標記
+        launch_date_affected = False
+
+        if use_date_based_calculation:
+            # 使用日期感知計算（加權平均）
+            avg_daily_sales, launch_date_affected = self.calculate_avg_daily_sales_with_date(
+                mtd_sold_qty,
+                last_month_qty,
+                last_2_month_qty,
+                mtd_days,
+                last_month_days,
+                last_2_month_days,
+                selected_date_obj,
+                launch_date_converted
+            )
+            calculation_method = CALCULATION_METHOD_DATE_BASED
+        else:
+            # 使用標準計算（固定60天）
+            avg_daily_sales = self.calculate_avg_daily_sales(
+                last_month_qty,
+                last_2_month_qty
+            )
+            calculation_method = "Standard (60 Days)"
         
         # 檢查是否使用 Target Qty 模式
         use_target_qty = target_qty is not None and self.settings.use_target_qty_mode
@@ -357,6 +587,13 @@ class SafetyStockCalculator:
             user_max_days
         )
         
+        # 步驟 6.5：套用 MCH2 最低安全庫存要求
+        suggested_ss, mch2_constraint_applied, mch2_minimum_required = self.apply_mch2_minimum_requirement(
+            suggested_ss,
+            mch2,
+            shop_class
+        )
+        
         # 步驟 7：計算支撐天數
         safety_stock_days = self.calculate_safety_stock_days(
             suggested_ss,
@@ -364,8 +601,16 @@ class SafetyStockCalculator:
         )
         
         # 步驟 8：判斷約束條件
-        if moq_constraint_applied and max_days_constraint_applied:
+        if moq_constraint_applied and max_days_constraint_applied and mch2_constraint_applied:
+            constraint_applied = "MOQ + 天數上限 + MCH2"
+        elif moq_constraint_applied and max_days_constraint_applied:
             constraint_applied = CONSTRAINT_BOTH
+        elif moq_constraint_applied and mch2_constraint_applied:
+            constraint_applied = "MOQ + MCH2"
+        elif max_days_constraint_applied and mch2_constraint_applied:
+            constraint_applied = "天數上限 + MCH2"
+        elif mch2_constraint_applied:
+            constraint_applied = "MCH2"
         elif moq_constraint_applied:
             constraint_applied = CONSTRAINT_MOQ
         elif max_days_constraint_applied:
@@ -373,12 +618,30 @@ class SafetyStockCalculator:
         else:
             constraint_applied = CONSTRAINT_NONE
 
-        calculation_mode = "Standard"
+        calculation_mode = calculation_method
 
         # 步驟 9：生成 Notes 說明
         notes_parts = []
         notes_parts.append(f"計算步驟：")
-        notes_parts.append(f"1. 平均日銷量 = ({last_month_qty} + {last_2_month_qty}) / 60 = {avg_daily_sales}")
+
+        if use_date_based_calculation:
+            notes_parts.append(f"0. 日期感知計算模式")
+            notes_parts.append(f"   - 選定參考日期：{selected_date}")
+            notes_parts.append(f"   - 當月(1月)天數：{mtd_days}天")
+            notes_parts.append(f"   - 上月(12月)天數：{last_month_days}天")
+            notes_parts.append(f"   - 前兩月(11月)天數：{last_2_month_days}天")
+            if launch_date is not None:
+                notes_parts.append(f"   - Launch Date：{launch_date}")
+            notes_parts.append(f"1. 平均日銷量（加權平均，基於實際天數）")
+            notes_parts.append(f"   - MTD 銷量 = {mtd_sold_qty}")
+            notes_parts.append(f"   - 上月銷量 = {last_month_qty}")
+            notes_parts.append(f"   - 前兩月銷量 = {last_2_month_qty}")
+            notes_parts.append(f"   - 平均日銷量 = ({mtd_sold_qty} + {last_month_qty} + {last_2_month_qty}) / ({mtd_days} + {last_month_days} + {last_2_month_days}) = {avg_daily_sales}")
+            # 如果受 Launch Date 影響，添加提示
+            if launch_date_affected:
+                notes_parts.append(f"   - Launch Date 影響計算，只計算Launch Date到參考日期的實際天數")
+        else:
+            notes_parts.append(f"1. 平均日銷量 = ({last_month_qty} + {last_2_month_qty}) / 60 = {avg_daily_sales}")
         notes_parts.append(f"2. 前置時間 = {lead_time} 天 (Supply Source: {supply_source})")
         notes_parts.append(f"3. 合併因素 MF = {mf} (Shop Class: {shop_class}, 服務水準: {mf_service_level}%)")
         notes_parts.append(f"4. 初步安全庫存 = {avg_daily_sales} × √{lead_time} × {mf} = {preliminary_ss}")
@@ -386,7 +649,11 @@ class SafetyStockCalculator:
         notes_parts.append(f"   → MOQ後安全庫存 = max({preliminary_ss}, {moq * self.settings.moq_multiplier}) = {ss_after_moq}")
         notes_parts.append(f"6. 套用天數上限：{avg_daily_sales} × {user_max_days} = {avg_daily_sales * user_max_days}")
         notes_parts.append(f"   → 建議安全庫存 = max({ss_after_moq}, {avg_daily_sales * user_max_days}) = {suggested_ss}")
-        notes_parts.append(f"7. 支撐天數 = {suggested_ss} / {avg_daily_sales} = {safety_stock_days} 天")
+        if mch2_constraint_applied:
+            notes_parts.append(f"7. 套用 MCH2 最低要求：MCH2 = {mch2}, Class = {shop_class}, 最低要求 = {mch2_minimum_required}")
+            notes_parts.append(f"   → 最終安全庫存 = max({suggested_ss}, {mch2_minimum_required}) = {suggested_ss}")
+        else:
+            notes_parts.append(f"7. 支撐天數 = {suggested_ss} / {avg_daily_sales} = {safety_stock_days} 天")
         notes_parts.append(f"約束條件：{constraint_applied}")
         notes_parts.append(f"計算模式：{calculation_mode}")
         notes = "\n".join(notes_parts)
@@ -395,7 +662,7 @@ class SafetyStockCalculator:
         suggested_diff = suggested_ss - (original_safety_stock if original_safety_stock is not None else 0)
 
         # 返回所有結果
-        return {
+        result = {
             "Article": article,
             "Site": site,
             "Class": shop_class,
@@ -432,5 +699,18 @@ class SafetyStockCalculator:
             "RP Type": rp_type if rp_type is not None else "",
             "Target_Qty_Used": False,
             "Calculation_Mode": calculation_mode,
+            # 新增 MCH2 相關欄位
+            "MCH2": mch2 if mch2 is not None else "",
+            "MCH2_Minimum_Required": mch2_minimum_required if mch2_constraint_applied else 0,
+            "MCH2_Minimum_SS_Applied": mch2_constraint_applied,
             "Notes": notes
         }
+        
+        # 添加日期相關欄位（如果使用日期感知計算）
+        if use_date_based_calculation:
+            result[FIELD_SELECTED_DATE] = selected_date
+            result[FIELD_MTD_DAYS] = mtd_days
+            result[FIELD_LAST_MONTH_DAYS] = last_month_days
+            result[FIELD_LAST_2_MONTH_DAYS] = last_2_month_days
+        
+        return result

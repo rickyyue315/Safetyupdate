@@ -3,7 +3,9 @@ Data processing module for Safety(Buffer) Stock Calculation
 """
 import pandas as pd
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple, Optional
+from datetime import datetime, date
+import calendar
 from core.constants import (
     REQUIRED_INPUT_FIELDS,
     COLUMN_NAME_ALIASES,
@@ -19,8 +21,121 @@ from core.constants import (
     FIELD_PRODUCT_HIERARCHY,
     FIELD_ARTICLE_DESCRIPTION,
     FIELD_RP_TYPE,
-    FIELD_TARGET_QTY
+    FIELD_TARGET_QTY,
+    FIELD_LAUNCH_DATE,
+    FIELD_SELECTED_DATE,
+    FIELD_MTD_DAYS,
+    FIELD_LAST_MONTH_DAYS,
+    FIELD_LAST_2_MONTH_DAYS,
+    FIELD_MCH2,
+    CALCULATION_METHOD_DATE_BASED
 )
+
+
+class DateCalculator:
+    """日期計算工具類別"""
+    
+    @staticmethod
+    def get_days_in_month(year: int, month: int) -> int:
+        """
+        取得指定年月的天數
+        
+        參數:
+            year: 年份
+            month: 月份 (1-12)
+            
+        返回:
+            該月的天數
+        """
+        return calendar.monthrange(year, month)[1]
+    
+    @staticmethod
+    def calculate_mtd_days(selected_date: date) -> int:
+        """
+        計算 MTD (Month-To-Date) 天數
+        
+        參數:
+            selected_date: 選定的參考日期
+            
+        返回:
+            當月已過的天數
+        """
+        return selected_date.day
+    
+    @staticmethod
+    def get_last_month_info(year: int, month: int) -> Tuple[int, int, int]:
+        """
+        取得上月信息
+        
+        參數:
+            year: 當前年份
+            month: 當前月份 (1-12)
+            
+        返回:
+            (上年年份, 上月月份, 上月天數)
+        """
+        if month == 1:
+            # 當前是1月，上月是前一年的12月
+            return year - 1, 12, 31
+        else:
+            # 上月是當前年 month-1
+            last_month = month - 1
+            return year, last_month, DateCalculator.get_days_in_month(year, last_month)
+    
+    @staticmethod
+    def get_last_2_month_info(year: int, month: int) -> Tuple[int, int, int]:
+        """
+        取得前兩個月信息
+        
+        參數:
+            year: 當前年份
+            month: 當前月份 (1-12)
+            
+        返回:
+            (前兩月年份, 前兩月月份, 前兩月天數)
+        """
+        if month == 1:
+            # 當前是1月，前兩月是前一年的11月
+            return year - 1, 11, 30
+        elif month == 2:
+            # 當前是2月，前兩月是前一年的12月
+            return year - 1, 12, 31
+        else:
+            # 前兩月是當前年 month-2
+            last_2_month = month - 2
+            return year, last_2_month, DateCalculator.get_days_in_month(year, last_2_month)
+    
+    @staticmethod
+    def calculate_date_parameters(selected_date: date) -> Dict[str, int]:
+        """
+        計算所有日期相關參數
+        
+        參數:
+            selected_date: 選定的參考日期
+            
+        返回:
+            包含所有日期參數的字典
+        """
+        mtd_days = DateCalculator.calculate_mtd_days(selected_date)
+        last_month_year, last_month, last_month_days = DateCalculator.get_last_month_info(
+            selected_date.year, selected_date.month
+        )
+        last_2_month_year, last_2_month, last_2_month_days = DateCalculator.get_last_2_month_info(
+            selected_date.year, selected_date.month
+        )
+        
+        return {
+            FIELD_SELECTED_DATE: selected_date.strftime('%Y-%m-%d'),
+            FIELD_MTD_DAYS: mtd_days,
+            FIELD_LAST_MONTH_DAYS: last_month_days,
+            FIELD_LAST_2_MONTH_DAYS: last_2_month_days,
+            'current_month': selected_date.month,  # 新增當月月份
+            'current_year': selected_date.year,    # 新增當月年份
+            'last_month_year': last_month_year,
+            'last_month': last_month,
+            'last_2_month_year': last_2_month_year,
+            'last_2_month': last_2_month
+        }
 
 
 class DataProcessor:
@@ -186,6 +301,17 @@ class DataProcessor:
             optional_numeric_columns.append(FIELD_MTD_SOLD_QTY)
         if FIELD_TARGET_QTY in df_clean.columns:
             optional_numeric_columns.append(FIELD_TARGET_QTY)
+
+        # 處理 Launch Date 欄位（轉換為日期格式）
+        if FIELD_LAUNCH_DATE in df_clean.columns:
+            df_clean[FIELD_LAUNCH_DATE] = pd.to_datetime(df_clean[FIELD_LAUNCH_DATE], errors='coerce')
+        
+        # 處理 MCH2 欄位（轉換為字串類型）
+        if FIELD_MCH2 in df_clean.columns:
+            # 將 MCH2 轉換為字串並標準化為 4 位數格式（前面補零）
+            df_clean[FIELD_MCH2] = df_clean[FIELD_MCH2].apply(
+                lambda x: str(int(x)).zfill(4) if pd.notna(x) and str(x).strip() != "" else ""
+            )
         
         all_numeric_columns = numeric_columns + optional_numeric_columns
         
@@ -239,6 +365,12 @@ class DataProcessor:
         # 新增 RP Type（如果存在）
         if FIELD_RP_TYPE in df.columns:
             columns_to_include.append(FIELD_RP_TYPE)
+        # 新增 Launch Date（如果存在）
+        if FIELD_LAUNCH_DATE in df.columns:
+            columns_to_include.append(FIELD_LAUNCH_DATE)
+        # 新增 MCH2（如果存在）
+        if FIELD_MCH2 in df.columns:
+            columns_to_include.append(FIELD_MCH2)
         
         records = df[columns_to_include].to_dict('records')
         return records

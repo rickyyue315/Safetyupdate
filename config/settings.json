@@ -2,5 +2,7 @@
   "max_safety_stock_days": 7,
   "moq_multiplier": 1.25,
   "moq_constraint_mode": "multiplier",
-  "shop_class_max_days": {}
+  "shop_class_max_days": {},
+  "use_target_qty_mode": false,
+  "calculate_ss_for_all_rp_types": true
 }

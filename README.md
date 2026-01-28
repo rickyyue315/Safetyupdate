@@ -1,15 +1,23 @@
-# 安全(緩衝)庫存計算機 v2.0
-# Safety(Buffer) Stock Calculation v2.0
+# 安全(緩衝)庫存計算機 v2.3
+# Safety(Buffer) Stock Calculation v2.3
 
 ## 📋 專案簡介
 
 本系統根據實際可用資料欄位及商業限制，計算合理的安全庫存建議值。系統確保重點店（高階 Shop Class）擁有較高服務水準，同時滿足 MOQ 最小訂購量要求，並允許使用者自訂安全庫存天數上限（7–14 天）。
 
-**v2.0 新增功能**：支援 Target Qty 模式與 SKU 目標數量分配（Target Safety Stock），可直接根據銷售預測設定安全庫存。
+**v2.3 新增功能**：
+- ✅ MCH2 最低安全庫存要求：當 MCH2 欄位為 "0302" 時，根據 Shop Class 應用最低安全庫存要求（AA/A1/A2/A3 ≥ 12件，B1/B2 ≥ 10件，C1/C2/D1 ≥ 6件）
+
+**v2.2 新增功能**：
+- ✅ Launch Date 驗證功能：根據商品實際上市日期調整安全庫存計算，當商品上市時間短於計算週期時，使用實際天數計算平均日銷量，提供更精確的安全庫存建議
+- ✅ Target Qty 模式：支援直接使用輸入資料中的 `Target Qty` 作為安全庫存，跳過公式計算
+- ✅ Target Safety Stock 模式：支援輸入 SKU 總目標數量，系統自動按比例分配至各店舖
 
 ## ✨ 核心功能
 
 - **智能計算**: 根據平均日銷量、前置時間和合併因素計算安全庫存
+- **MCH2 最低安全庫存要求**: 當 MCH2 欄位為 "0302" 時，根據 Shop Class 應用最低安全庫存要求（AA/A1/A2/A3 ≥ 12件，B1/B2 ≥ 10件，C1/C2/D1 ≥ 6件）
+- **Launch Date 驗證**: 根據商品實際上市日期調整計算邏輯，當商品上市時間短於計算週期時，使用實際天數計算平均日銷量，提供更精確的安全庫存建議
 - **MOQ 約束**: 自動套用最小訂購量約束（支援乘數模式和加 1 模式）
 - **天數上限**: 支援自訂安全庫存天數上限（7-14 天）
 - **Target Qty 模式**: 支援直接使用輸入資料中的 `Target Qty` 作為安全庫存，跳過公式計算
@@ -17,6 +25,7 @@
 - **多種輸入**: 支援 CSV 和 Excel 檔案輸入
 - **結果匯出**: 可匯出計算結果為 Excel 或 CSV 格式，包含詳細的 SKU 統計摘要
 - **設定管理**: 支援全域設定和按 Shop Class 設定天數上限
+- **日期感知計算**: 支援根據用戶選定的參考日期，自動計算 MTD 天數、上月天數、前兩月天數，並使用加權平均公式計算平均日銷量
 
 ## 📐 計算公式
 
@@ -24,6 +33,41 @@
 1. **初步安全庫存**: `SS_preliminary = Avg_Daily_Sales × √Lead_Time_Days × MF`
 2. **套用 MOQ 約束**: `SS_after_MOQ = max(SS_preliminary, MOQ × multiplier)`
 3. **套用天數上限**: `Suggested_Safety_Stock = min(SS_after_MOQ, Avg_Daily_Sales × Max_Days)`
+4. **套用 MCH2 最低要求**（若 MCH2 = "0302"）: `Suggested_Safety_Stock = max(Suggested_Safety_Stock, MCH2_Minimum_Required)`
+   - **最低要求映射**:
+     - Shop Class AA, A1, A2, A3: 12 件
+     - Shop Class B1, B2: 10 件
+     - Shop Class C1, C2, D1: 6 件
+
+### 2. 日期感知計算模式 (Date-Based Calculation Mode)
+1. **日期參數計算**: 根據用戶選定的參考日期，自動計算：
+   - MTD 天數（當月已過天數）
+   - 上月天數（12月 = 31 天）
+   - 前兩月天數（11月 = 30 天）
+2. **加權平均日銷量**: 使用實際月份天數計算
+   - **計算公式**:
+     - **標準模式（60天）**: `Avg_Daily_Sales = (Last_Month_Sold_Qty + Last_2_Month_Sold_Qty) / 60`
+     - **日期感知模式（加權平均）**: `Avg_Daily_Sales = (MTD_Sold_Qty + Last_Month_Sold_Qty + Last_2_Month_Sold_Qty) / (MTD_Days + Last_Month_Days + Last_2_Month_Days)`
+   - **範例**（2026-01-27）：
+     - MTD 天數 = 26
+     - 上月天數 = 31（12月）
+     - 前兩月天數 = 30（11月）
+     - Avg = (26 + 100 + 90) / (26 + 31 + 30) = 216 / 87 ≈ 2.48
+
+### 3. Launch Date 影響計算
+當商品提供 Launch Date（上市日期）時，系統會檢測是否需要調整計算邏輯：
+- **啟動條件**: 當 Launch Date 到參考日期的實際天數 **少於** 計算總天數時
+- **計算公式**:
+  ```
+  days_since_launch = (參考日期 - Launch Date).days + 1
+  Avg_Daily_Sales = (MTD_Qty + Last_Month_Qty + Last_2_Month_Qty) / days_since_launch
+  ```
+- **範例**（參考日期 2026-01-26，Launch Date 2026-01-21）：
+  - 標準總天數 = 87 天（26 + 31 + 30）
+  - 實際天數 = 6 天（1/21 到 1/26）
+  - 由於 6 < 87，使用實際天數計算
+  - Avg = (20 + 100 + 150) / 6 = 270 / 6 = 45.0
+- **Notes 提示**: 系統會在 Notes 欄位中顯示「Launch Date 影響計算，只計算Launch Date到參考日期的實際天數」
 
 ### 2. Target Qty 模式
 - `Suggested_Safety_Stock = Target Qty` (直接使用輸入值)
@@ -144,7 +188,9 @@ Kilo Safety Stock Calculate/
 | Last 2 Month Sold Qty | 前兩個月銷量總和 | 240 |
 | Supply Source | 供應來源代碼 | 1, 2, 4 |
 | MOQ | 最小訂購量 | 10 |
+| MCH2 | MCH2 值（必須欄位） | 0302 |
 | Target Qty | 目標數量 (可選) | 50 |
+| Launch Date | 商品上市日期 (可選，格式：yyyy-MM-dd) | 2026-01-21 |
 
 您可以下載 [`data/input/sample_input.csv`](data/input/sample_input.csv) 作為參考。
 
@@ -229,10 +275,14 @@ Kilo Safety Stock Calculate/
 | SS_after_MOQ | 套用 MOQ 約束後的安全庫存 |
 | User_Max_Days_Applied | 應用的天數上限 |
 | Suggested_Safety_Stock | 建議安全庫存（最終值） |
-| Constraint_Applied | 約束類型（MOQ / 天數上限 / 兩者 / Target Qty / Target Safety Stock） |
+| Constraint_Applied | 約束類型（MOQ / 天數上限 / MCH2 / 兩者 / 三者 / Target Qty / Target Safety Stock） |
 | Safety_Stock_Days | 最終值可支撐天數 |
+| MCH2 | MCH2 值 |
+| MCH2_Minimum_Required | MCH2 最低要求值（若不適用則為 0） |
+| MCH2_Minimum_SS_Applied | 是否應用了 MCH2 約束 (True/False) |
 | Target_Qty_Used | 是否使用了 Target Qty (True/False) |
 | Calculation_Mode | 計算模式 (Standard / Target Qty / Target Safety Stock) |
+| Notes | 計算說明，包含 Launch Date 影響提示（如適用） |
 
 ## 🔧 開發指南
 
@@ -282,7 +332,7 @@ flake8 .
 - [ ] 提供更多匯出格式（PDF、JSON）
 - [ ] 加入資料視覺化圖表
 
-### 中期擴展（v2.0）
+### 中期擴展（v2.1）
 - [ ] 引入銷量標準差計算，升級為完整統計模型
 - [ ] 加入季節性/促銷調整係數
 - [ ] 支援資料庫連接（MySQL、PostgreSQL）
@@ -323,3 +373,7 @@ A: 請確認 Docker 已正確安裝並執行，檢查端口 8501 是否被佔用
 ---
 
 **注意**: 本系統僅提供建議值，實際庫存管理應根據具體業務情況進行調整。
+
+---
+
+**Safety (Buffer) Stock Calculate v2.3 - For RP team (Build up by Ricky Yue)**

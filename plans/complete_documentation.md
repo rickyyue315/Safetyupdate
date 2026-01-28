@@ -466,7 +466,7 @@ pytest tests/test_column_mapping.py -v
 - 提供更多匯出格式（PDF、JSON）
 - 加入資料視覺化圖表
 
-### 中期擴展（v2.0）
+### 中期擴展（v2.1）
 - 引入銷量標準差計算
 - 加入季節性/促銷調整係數
 - 支援資料庫連接（MySQL、PostgreSQL）
