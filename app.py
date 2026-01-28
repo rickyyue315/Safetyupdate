@@ -218,14 +218,31 @@ def display_settings_panel(settings: 'Settings') -> 'Settings':
         help="所有店舖的預設天數上限（3-21 天）"
     )
     
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("RP Type 計算選項")
+
+    rp_type_options = ["all", "rf"]
+    default_rp_option = "all" if settings.calculate_ss_for_all_rp_types else "rf"
+    selected_rp_option = st.sidebar.radio(
+        "Safety Stock 計算範圍",
+        options=rp_type_options,
+        format_func=lambda x: "計算所有 RP Type（ND + RF）" if x == "all" else "僅計算 RF 型",
+        index=rp_type_options.index(default_rp_option),
+        help="選擇是計算所有 RP Type 的 Safety Stock，還是僅計算 RF 型的 Safety Stock"
+    )
+    calculate_ss_for_all_rp_types = selected_rp_option == "all"
+
+    if not calculate_ss_for_all_rp_types:
+        st.sidebar.info(
+            "ℹ️ **RP Type 過濾說明**\n\n"
+            "選擇「僅計算 RF 型」時：\n"
+            "• RP Type = RF 的商品：正常計算 Safety Stock\n"
+            "• RP Type = ND 的商品：使用原始 Safety Stock（不計算）\n"
+            "• RP Type 缺失或其他值：正常計算 Safety Stock"
+        )
+
     # MOQ 約束設定
     st.sidebar.subheader("MOQ 約束設定")
-    moq_mode = st.sidebar.selectbox(
-        "MOQ 約束模式",
-        ["multiplier", "add_one"],
-        index=0 if settings.moq_constraint_mode == "multiplier" else 1,
-        help="選擇 MOQ 約束的計算模式"
-    )
     
     moq_multiplier = st.sidebar.number_input(
         "MOQ 約束乘數",
@@ -278,30 +295,6 @@ def display_settings_panel(settings: 'Settings') -> 'Settings':
             "• 如果資料包含 'Target Qty' 欄位，直接使用該值作為 Safety Stock\n"
             "• 跳過原有的 MF、MOQ 約束、天數上限計算\n"
             "• 適合用於按未來一個月的銷售預測來設定 Safety Stock"
-        )
-    
-    # Class 權重設定
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("RP Type 計算選項")
-    
-    rp_type_options = ["all", "rf"]
-    default_rp_option = "all" if settings.calculate_ss_for_all_rp_types else "rf"
-    selected_rp_option = st.sidebar.radio(
-        "Safety Stock 計算範圍",
-        options=rp_type_options,
-        format_func=lambda x: "計算所有 RP Type（ND + RF）" if x == "all" else "僅計算 RF 型",
-        index=rp_type_options.index(default_rp_option),
-        help="選擇是計算所有 RP Type 的 Safety Stock，還是僅計算 RF 型的 Safety Stock"
-    )
-    calculate_ss_for_all_rp_types = selected_rp_option == "all"
-    
-    if not calculate_ss_for_all_rp_types:
-        st.sidebar.info(
-            "ℹ️ **RP Type 過濾說明**\n\n"
-            "選擇「僅計算 RF 型」時：\n"
-            "• RP Type = RF 的商品：正常計算 Safety Stock\n"
-            "• RP Type = ND 的商品：使用原始 Safety Stock（不計算）\n"
-            "• RP Type 缺失或其他值：正常計算 Safety Stock"
         )
     
     # Class 權重設定
