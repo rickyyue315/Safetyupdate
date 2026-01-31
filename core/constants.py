@@ -36,73 +36,6 @@ MCH2_MINIMUM_SS_MAP: Dict[str, Dict[str, int]] = {
 }
 
 
-# 店舖類型安全庫存配置表 (Shop Type-based Safety Stock Configuration)
-# 根據區域 (HK/MO) + 舖類 (A/B/C/D) + 貨場面積 (XL/L/M/S/XS) 來配置固定的安全庫存數量
-# 格式: {region: {class: {size: safety_stock_qty}}}
-SHOP_TYPE_SS_CONFIG: Dict[str, Dict[str, Dict[str, int]]] = {
-    "HK": {
-        "A": {
-            "XL": 18,
-            "L": 18,
-            "M": 18,
-            "S": 18,
-            "XS": 18
-        },
-        "B": {
-            "XL": 18,
-            "L": 18,
-            "M": 12,
-            "S": 12,
-            "XS": 12
-        },
-        "C": {
-            "XL": 12,
-            "L": 12,
-            "M": 12,
-            "S": 12,
-            "XS": 0
-        },
-        "D": {
-            "XL": 9,
-            "L": 9,
-            "M": 6,
-            "S": 6,
-            "XS": 6
-        }
-    },
-    "MO": {
-        "A": {
-            "XL": 24,
-            "L": 24,
-            "M": 24,
-            "S": 24,
-            "XS": 24
-        },
-        "B": {
-            "XL": 18,
-            "L": 18,
-            "M": 18,
-            "S": 12,
-            "XS": 12
-        },
-        "C": {
-            "XL": 12,
-            "L": 12,
-            "M": 12,
-            "S": 12,
-            "XS": 0
-        },
-        "D": {
-            "XL": 9,
-            "L": 9,
-            "M": 6,
-            "S": 6,
-            "XS": 6
-        }
-    }
-}
-
-
 # Supply Source 對應的前置時間表（天數）
 # "1" 或 "4" → 7 天（行貨）
 # "2" → 3 天（倉貨）
@@ -143,8 +76,6 @@ FIELD_RP_TYPE = "RP Type"
 FIELD_TARGET_QTY = "Target Qty"
 FIELD_LAUNCH_DATE = "Launch Date"
 FIELD_MCH2 = "MCH2"
-FIELD_REGION = "Region"  # 區域 (HK/MO)
-FIELD_SHOP_SIZE = "Shop Size"  # 貨場面積 (XL/L/M/S/XS)
 
 
 # 輸出欄位名稱
@@ -272,18 +203,4 @@ COLUMN_NAME_ALIASES: Dict[str, str] = {
     "Launch date": FIELD_LAUNCH_DATE,
     "launch date": FIELD_LAUNCH_DATE,
     "launch Date": FIELD_LAUNCH_DATE,
-    
-    # Region 的變體
-    "Region": FIELD_REGION,
-    "region": FIELD_REGION,
-    "HK/ MO": FIELD_REGION,
-    "HK/MO": FIELD_REGION,
-    
-    # Shop Size 的變體
-    "Shop Size": FIELD_SHOP_SIZE,
-    "shop size": FIELD_SHOP_SIZE,
-    "Shop size": FIELD_SHOP_SIZE,
-    "貨場面積": FIELD_SHOP_SIZE,
-    "Size": FIELD_SHOP_SIZE,
-    "size": FIELD_SHOP_SIZE,
 }

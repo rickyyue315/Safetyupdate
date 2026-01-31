@@ -1,12 +1,9 @@
-# 安全(緩衝)庫存計算機 v2.5
-# Safety(Buffer) Stock Calculation v2.5
+# 安全(緩衝)庫存計算機 v2.3
+# Safety(Buffer) Stock Calculation v2.3
 
 ## 📋 專案簡介
 
 本系統根據實際可用資料欄位及商業限制，計算合理的安全庫存建議值。系統確保重點店（高階 Shop Class）擁有較高服務水準，同時滿足 MOQ 最小訂購量要求，並允許使用者自訂安全庫存天數上限（7–14 天）。
-
-**v2.5 新增功能** 🆕：
-- ✅ **店舖類型配置模式**：根據店舖區域(HK/MO) + 店舖等級(A/B/C/D) + 貨場面積(XL/L/M/S/XS)查表獲取固定安全庫存數量，適合統一配貨標準場景
 
 **v2.3 新增功能**：
 - ✅ MCH2 最低安全庫存要求：當 MCH2 欄位為 "0302" 時，根據 Shop Class 應用最低安全庫存要求（AA/A1/A2/A3 ≥ 12件，B1/B2 ≥ 10件，C1/C2/D1 ≥ 6件）
@@ -19,7 +16,6 @@
 ## ✨ 核心功能
 
 - **智能計算**: 根據平均日銷量、前置時間和合併因素計算安全庫存
-- **店舖類型配置模式** 🆕: 根據店舖區域、等級和面積查表獲取固定安全庫存，適合統一配貨標準
 - **MCH2 最低安全庫存要求**: 當 MCH2 欄位為 "0302" 時，根據 Shop Class 應用最低安全庫存要求（AA/A1/A2/A3 ≥ 12件，B1/B2 ≥ 10件，C1/C2/D1 ≥ 6件）
 - **Launch Date 驗證**: 根據商品實際上市日期調整計算邏輯，當商品上市時間短於計算週期時，使用實際天數計算平均日銷量，提供更精確的安全庫存建議
 - **MOQ 約束**: 自動套用最小訂購量約束（支援乘數模式和加 1 模式）
@@ -33,17 +29,7 @@
 
 ## 📐 計算公式
 
-### 1. 店舖類型配置模式 (Shop Type Configuration Mode) 🆕
-- **查表邏輯**: 根據「區域 (HK/MO)」+「店舖等級 (A/B/C/D)」+「貨場面積 (XL/L/M/S/XS)」查詢配置表
-- **固定配置**: 使用預先設定的固定安全庫存數量，不使用公式計算
-- **必要欄位**: `Region` (區域), `Class` (店舖等級), `Shop Size` (貨場面積)
-- **配置範例**:
-  - HK A級店鋪: 18件
-  - HK B級店鋪 L: 18件, M/S/XS: 12件
-  - MO A級店鋪: 24件
-- **詳細說明**: 參考 [店舖類型配置模式快速指南](SHOP_TYPE_MODE_QUICK_GUIDE.md)
-
-### 2. 標準模式 (Standard Mode)
+### 1. 標準模式 (Standard Mode)
 1. **初步安全庫存**: `SS_preliminary = Avg_Daily_Sales × √Lead_Time_Days × MF`
 2. **套用 MOQ 約束**: `SS_after_MOQ = max(SS_preliminary, MOQ × multiplier)`
 3. **套用天數上限**: `Suggested_Safety_Stock = min(SS_after_MOQ, Avg_Daily_Sales × Max_Days)`
@@ -53,7 +39,7 @@
      - Shop Class B1, B2: 10 件
      - Shop Class C1, C2, D1: 6 件
 
-### 3. 日期感知計算模式 (Date-Based Calculation Mode)
+### 2. 日期感知計算模式 (Date-Based Calculation Mode)
 1. **日期參數計算**: 根據用戶選定的參考日期，自動計算：
    - MTD 天數（當月已過天數）
    - 上月天數（12月 = 31 天）
