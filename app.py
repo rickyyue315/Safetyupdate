@@ -71,7 +71,7 @@ def display_home_page():
         
         6. **在 Excel 內新增 Class (店舖級別)**：手動新增店舖等級欄位
         
-        7. **Excel 必須刪除 D001**：刪除 D001 門市的資料
+        7. **Excel 必須刪除 D001**：刪除 D001 的資料
         
         ---
         
@@ -92,8 +92,9 @@ def display_home_page():
     - **智能計算**: 根據平均日銷量、前置時間和合併因素計算安全庫存
     - **Launch Date 驗證**: 根據商品實際上市日期調整計算邏輯，當商品上市時間短於計算週期時，使用實際天數計算平均日銷量，提供更精確的安全庫存建議
     - **MOQ 約束**: 自動套用最小訂購量約束（支援乘數模式和加 1 模式）
-    - **天數上限**: 支援自訂安全庫存天數上限（7-14 天）
+    - **天數上限**: 支援自訂安全庫存天數上限（3-21 天）
     - **Target Qty 模式**: 支援直接使用輸入資料中的 `Target Qty` 作為安全庫存
+    - **店舖類型配置模式**: 根據店舖區域、等級和貨場面積查表獲取固定安全庫存（全新模式）
     - **Target Safety Stock 模式**: 支援輸入 SKU 總目標數量，系統自動按比例分配至各店舖
     - **多種輸入**: 支援 CSV 和 Excel 檔案輸入
     - **結果匯出**: 可匯出計算結果為 Excel 或 CSV 格式，包含詳細的 SKU 統計摘要
@@ -123,7 +124,17 @@ def display_home_page():
     #### 3. Target Qty 模式
     - 直接使用輸入資料中的 `Target Qty` 作為安全庫存值。
     
-    #### 4. Target Safety Stock 模式
+    #### 4. 店舖類型配置模式 (Shop Type Configuration Mode) 🆕
+    - **查表邏輯**: 根據「區域 (HK/MO)」+「店舖等級 (A/B/C/D)」+「貨場面積 (XL/L/M/S/XS)」查詢配置表
+    - **固定配置**: 使用預先設定的固定安全庫存數量，不使用公式計算
+    - **必要欄位**: `Region` (區域), `Class` (店舖等級), `Shop Size` (貨場面積)
+    - **配置範例**:
+      - HK A級店鋪（XL/L/M/S/XS）: 18件
+      - HK B級店鋪 L: 18件, M/S/XS: 12件
+      - MO A級店鋪: 24件
+    - **適用場景**: 統一的店舖配置標準、固定配貨策略
+    
+    #### 5. Target Safety Stock 模式
     - 根據輸入的 SKU 總目標數量，按標準模式計算出的比例分配至各店舖。
     
     ### Class 權重說明
@@ -222,7 +233,7 @@ def display_settings_panel(settings: 'Settings') -> 'Settings':
     st.sidebar.subheader("RP Type 計算選項")
 
     rp_type_options = ["all", "rf"]
-    default_rp_option = "all" if settings.calculate_ss_for_all_rp_types else "rf"
+    default_rp_option = "all" if getattr(settings, 'calculate_ss_for_all_rp_types', True) else "rf"
     selected_rp_option = st.sidebar.radio(
         "Safety Stock 計算範圍",
         options=rp_type_options,
@@ -304,6 +315,27 @@ def display_settings_panel(settings: 'Settings') -> 'Settings':
             "• 適合用於按未來一個月的銷售預測來設定 Safety Stock"
         )
     
+    # 店舖類型模式設定
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("店舖類型配置模式")
+    use_shop_type_mode = st.sidebar.checkbox(
+        "啟用店舖類型配置模式",
+        value=settings.use_shop_type_mode,
+        help="根據區域(HK/MO) + 店舖等級(A/B/C/D) + 貨場面積(XL/L/M/S/XS)查表獲取固定安全庫存數量"
+    )
+    
+    # 顯示店舖類型模式說明
+    if use_shop_type_mode:
+        st.sidebar.info(
+            "🏪 **店舖類型配置模式說明**\n\n"
+            "當啟用此模式時：\n"
+            "• 使用固定的店舖類型配置表\n"
+            "• 根據「區域」+「店舖等級」+「貨場面積」查表\n"
+            "• 跳過原有的公式計算\n"
+            "• 適合用於統一的店舖配置標準\n\n"
+            "**必要欄位**: Region (區域), Class (店舖等級), Shop Size (貨場面積)"
+        )
+    
     # Class 權重設定
     st.sidebar.markdown("---")
     st.sidebar.subheader("Class 權重設定")
@@ -352,7 +384,8 @@ def display_settings_panel(settings: 'Settings') -> 'Settings':
         shop_class_max_days=shop_class_max_days if enable_custom_max_days else {},
         use_target_qty_mode=use_target_qty_mode,
         class_weights=class_weights,
-        calculate_ss_for_all_rp_types=calculate_ss_for_all_rp_types
+        calculate_ss_for_all_rp_types=calculate_ss_for_all_rp_types,
+        use_shop_type_mode=use_shop_type_mode
     )
     
     # 按鈕區域
@@ -824,7 +857,9 @@ def calculate_safety_stock(
                 last_month_days=last_month_days,
                 last_2_month_days=last_2_month_days,
                 launch_date=record.get('Launch Date'),
-                mch2=record.get('MCH2')
+                mch2=record.get('MCH2'),
+                region=record.get('Region'),
+                shop_size=record.get('Shop Size')
             )
             results.append(result)
         except Exception as e:

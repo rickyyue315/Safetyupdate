@@ -17,7 +17,8 @@ class Settings:
         shop_class_max_days: Optional[Dict[str, int]] = None,
         use_target_qty_mode: bool = False,
         class_weights: Optional[Dict[str, int]] = None,
-        calculate_ss_for_all_rp_types: bool = True
+        calculate_ss_for_all_rp_types: bool = True,
+        use_shop_type_mode: bool = False
     ):
         """
         初始化設定
@@ -30,6 +31,7 @@ class Settings:
             use_target_qty_mode: 是否使用 Target Qty 模式（預設 False）
             class_weights: Class 權重設定（可選，預設 A=3, B=2, C=1, D=1）
             calculate_ss_for_all_rp_types: 是否計算所有RP Type的Safety Stock（預設 True；False時僅計算RF）
+            use_shop_type_mode: 是否使用店舖類型配置模式（預設 False）
         """
         self.max_safety_stock_days = max_safety_stock_days
         self.moq_multiplier = moq_multiplier
@@ -38,6 +40,7 @@ class Settings:
         self.use_target_qty_mode = use_target_qty_mode
         self.class_weights = class_weights or {"A": 3, "B": 2, "C": 1, "D": 1}
         self.calculate_ss_for_all_rp_types = calculate_ss_for_all_rp_types
+        self.use_shop_type_mode = use_shop_type_mode
         
         # 驗證設定
         self._validate()
@@ -107,7 +110,8 @@ class Settings:
             "shop_class_max_days": self.shop_class_max_days,
             "use_target_qty_mode": self.use_target_qty_mode,
             "class_weights": self.class_weights,
-            "calculate_ss_for_all_rp_types": self.calculate_ss_for_all_rp_types
+            "calculate_ss_for_all_rp_types": self.calculate_ss_for_all_rp_types,
+            "use_shop_type_mode": self.use_shop_type_mode
         }
     
     @classmethod
@@ -120,7 +124,8 @@ class Settings:
             shop_class_max_days=data.get("shop_class_max_days", {}),  # type: ignore
             use_target_qty_mode=data.get("use_target_qty_mode", False),  # type: ignore
             class_weights=data.get("class_weights", {"A": 3, "B": 2, "C": 1, "D": 1}),  # type: ignore
-            calculate_ss_for_all_rp_types=data.get("calculate_ss_for_all_rp_types", True)  # type: ignore
+            calculate_ss_for_all_rp_types=data.get("calculate_ss_for_all_rp_types", True),  # type: ignore
+            use_shop_type_mode=data.get("use_shop_type_mode", False)  # type: ignore
         )
     
     def save_to_file(self, file_path: str):

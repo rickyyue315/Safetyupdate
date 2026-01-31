@@ -43,7 +43,10 @@ from core.constants import (
     FIELD_LAST_2_MONTH_DAYS,
     FIELD_MCH2,
     MCH2_MINIMUM_SS_MAP,
-    CALCULATION_METHOD_DATE_BASED
+    CALCULATION_METHOD_DATE_BASED,
+    FIELD_REGION,
+    FIELD_SHOP_SIZE,
+    SHOP_TYPE_SS_CONFIG
 )
 
 
@@ -140,6 +143,50 @@ class SafetyStockCalculator:
         avg_daily_sales = total_qty / actual_days
         
         return round(avg_daily_sales, 2), launch_date_affected
+    
+    def get_shop_type_safety_stock(
+        self,
+        region: Optional[str],
+        shop_class: str,
+        shop_size: Optional[str]
+    ) -> Optional[int]:
+        """
+        根據店舖類型查詢固定的安全庫存配置
+        
+        參數:
+            region: 區域 (HK/MO)
+            shop_class: 店舖等級 (AA/A1/A2/A3/B1/B2/C1/C2/D1)
+            shop_size: 貨場面積 (XL/L/M/S/XS)
+            
+        返回:
+            安全庫存數量（如果配置表中沒有則返回 None）
+        """
+        # 如果任何必要欄位為空，返回 None
+        if not region or not shop_class or not shop_size:
+            return None
+        
+        # 標準化輸入
+        region = region.strip().upper()
+        shop_class = shop_class.strip().upper()
+        shop_size = shop_size.strip().upper()
+        
+        # 從 shop_class 中提取類別字母 (AA/A1/A2/A3 → A, B1/B2 → B, 等等)
+        if shop_class in ["AA", "A1", "A2", "A3"]:
+            class_category = "A"
+        elif shop_class in ["B1", "B2"]:
+            class_category = "B"
+        elif shop_class in ["C1", "C2"]:
+            class_category = "C"
+        elif shop_class in ["D1"]:
+            class_category = "D"
+        else:
+            return None
+        
+        # 查表
+        try:
+            return SHOP_TYPE_SS_CONFIG[region][class_category][shop_size]
+        except KeyError:
+            return None
     
     def determine_lead_time(self, supply_source: str) -> int:
         """
@@ -364,7 +411,9 @@ class SafetyStockCalculator:
         last_month_days: Optional[int] = None,
         last_2_month_days: Optional[int] = None,
         launch_date: Optional[date] = None,
-        mch2: Optional[str] = None
+        mch2: Optional[str] = None,
+        region: Optional[str] = None,
+        shop_size: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         執行完整的安全庫存計算流程
@@ -384,11 +433,66 @@ class SafetyStockCalculator:
             mtd_days: MTD 天數（可選）
             last_month_days: 上月天數（可選）
             last_2_month_days: 前兩月天數（可選）
+            launch_date: 商品上市日期（可選）
+            mch2: MCH2 欄位值（可選）
+            region: 區域 HK/MO（可選，用於店舖類型模式）
+            shop_size: 貨場面積 XL/L/M/S/XS（可選，用於店舖類型模式）
             
         返回:
             包含所有中間結果和最終結果的字典
         """
-        # 步驟 0：檢查 RP Type 過濾條件
+        # 步驟 0-A：檢查是否使用店舖類型模式
+        if self.settings.use_shop_type_mode:
+            # 查詢店舖類型配置表
+            shop_type_ss = self.get_shop_type_safety_stock(region, shop_class, shop_size)
+            
+            if shop_type_ss is not None:
+                # 店舖類型模式：使用配置表中的固定值
+                avg_daily_sales = self.calculate_avg_daily_sales(last_month_qty, last_2_month_qty)
+                safety_stock_days = self.calculate_safety_stock_days(shop_type_ss, avg_daily_sales)
+                
+                notes = f"計算步驟（店舖類型模式）：\n"
+                notes += f"區域: {region}, 店舖等級: {shop_class}, 貨場面積: {shop_size}\n"
+                notes += f"查表得到固定安全庫存 = {shop_type_ss}"
+                
+                return {
+                    "Article": article,
+                    "Site": site,
+                    "Class": shop_class,
+                    FIELD_REGION: region if region else "",
+                    FIELD_SHOP_SIZE: shop_size if shop_size else "",
+                    FIELD_RP_TYPE: rp_type if rp_type is not None else "",
+                    FIELD_ORIGINAL_SAFETY_STOCK: original_safety_stock if original_safety_stock is not None else 0,
+                    FIELD_MTD_SOLD_QTY: mtd_sold_qty if mtd_sold_qty is not None else 0,
+                    "Last_Month_Sold_Qty": last_month_qty,
+                    "Last_2_Month_Sold_Qty": last_2_month_qty,
+                    FIELD_PRODUCT_HIERARCHY: product_hierarchy if product_hierarchy is not None else "",
+                    FIELD_ARTICLE_DESCRIPTION: article_description if article_description is not None else "",
+                    FIELD_AVG_DAILY_SALES: avg_daily_sales,
+                    FIELD_LEAD_TIME_DAYS: 0,
+                    FIELD_MF_USED: 0,
+                    FIELD_MF_SERVICE_LEVEL: 0,
+                    FIELD_PRELIMINARY_SS: shop_type_ss,
+                    FIELD_SS_AFTER_MOQ: shop_type_ss,
+                    FIELD_USER_MAX_DAYS_APPLIED: 0,
+                    FIELD_SUGGESTED_SAFETY_STOCK: shop_type_ss,
+                    FIELD_CONSTRAINT_APPLIED: "店舖類型配置",
+                    FIELD_SAFETY_STOCK_DAYS: safety_stock_days,
+                    "Preliminary_SS_Days": safety_stock_days,
+                    "SS_after_MOQ_Days": safety_stock_days,
+                    "Suggested_SS_Days": safety_stock_days,
+                    FIELD_ORIGINAL_SAFETY_STOCK_DAYS: round(original_safety_stock / avg_daily_sales, 2) if original_safety_stock and avg_daily_sales > 0 else 0,
+                    FIELD_TARGET_SAFETY_STOCK: 0,
+                    FIELD_TARGET_SAFETY_STOCK_DAYS: 0,
+                    FIELD_SUGGESTED_DIFF: shop_type_ss - (original_safety_stock if original_safety_stock is not None else 0),
+                    FIELD_TARGET_DIFF: 0,
+                    "RP Type": rp_type if rp_type is not None else "",
+                    "Target_Qty_Used": False,
+                    "Calculation_Mode": "Shop Type Configuration",
+                    "Notes": notes
+                }
+        
+        # 步驟 0-B：檢查 RP Type 過濾條件
         # 如果設定為「僅計算 RF」且 RP Type 為 ND，則跳過計算
         if not self.settings.calculate_ss_for_all_rp_types:
             rp_type_upper = (rp_type.strip().upper() if rp_type else "").strip()
