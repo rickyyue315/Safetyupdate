@@ -1,0 +1,2053 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New SKU Safety Stock Calculator 使用說明書</title>
+    <style>
+        /* 基礎樣式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Microsoft JhengHei", "Microsoft YaHei", Arial, sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: #fff;
+            font-size: 12pt;
+        }
+
+        /* 列印優化 */
+        @media print {
+            body {
+                font-size: 11pt;
+            }
+            
+            .page-break {
+                page-break-before: always;
+            }
+            
+            .no-print {
+                display: none !important;
+            }
+            
+            .print-only {
+                display: block !important;
+            }
+            
+            /* 確保長表格可以分頁 */
+            table {
+                page-break-inside: avoid;
+            }
+            
+            tr {
+                page-break-inside: avoid;
+            }
+        }
+
+        /* 主容器 */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        /* 標題樣式 */
+        h1 {
+            font-size: 28pt;
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        h2 {
+            font-size: 20pt;
+            color: #667eea;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        h3 {
+            font-size: 16pt;
+            color: #444;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        h4 {
+            font-size: 14pt;
+            color: #666;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        /* 目錄 */
+        .toc {
+            background: #f8f9ff;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .toc h2 {
+            margin-top: 0;
+            font-size: 18pt;
+        }
+
+        .toc ul {
+            list-style: none;
+            padding-left: 20px;
+        }
+
+        .toc li {
+            margin: 8px 0;
+            font-size: 12pt;
+        }
+
+        .toc a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        /* 段落 */
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        /* 清單 */
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        /* 重點提示區塊 */
+        .tip-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .warning-box {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .info-box {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        /* 表格 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 11pt;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px 12px;
+            text-align: left;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        tr:hover {
+            background: #e8f4ff;
+        }
+
+        /* 代碼區塊 */
+        pre, code {
+            background: #2d3748;
+            color: #e2e8f0;
+            font-family: "Consolas", "Monaco", "Courier New", monospace;
+            font-size: 10pt;
+        }
+
+        code {
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        pre {
+            padding: 15px 20px;
+            overflow-x: auto;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+
+        /* 數學公式 */
+        .formula {
+            background: #f5f5f5;
+            padding: 20px 30px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 14pt;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+
+        .formula-title {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .formula-content {
+            font-family: "Times New Roman", serif;
+            font-size: 16pt;
+        }
+
+        /* 介面截圖區域 */
+        .interface-screenshot {
+            background: #f8f9fa;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+
+        .interface-title {
+            background: #667eea;
+            color: white;
+            padding: 8px 15px;
+            font-weight: bold;
+            margin: -20px -20px 20px -20px;
+            border-radius: 6px 6px 0 0;
+        }
+
+        /* 模擬介面區域 */
+        .mock-ui {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .mock-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            font-weight: bold;
+        }
+
+        .mock-content {
+            padding: 15px;
+        }
+
+        .mock-section {
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+
+        .mock-section-title {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            font-weight: bold;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .mock-section-content {
+            padding: 15px;
+        }
+
+        /* 模擬按鈕 */
+        .mock-btn {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 10pt;
+            margin: 3px;
+            cursor: default;
+        }
+
+        .mock-btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .mock-btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .mock-btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .mock-btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .mock-btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        /* 模擬表格 */
+        .mock-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+        }
+
+        .mock-table th, .mock-table td {
+            border: 1px solid #e2e8f0;
+            padding: 6px 8px;
+            text-align: center;
+        }
+
+        .mock-table th {
+            background: #667eea;
+            color: white;
+        }
+
+        .mock-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        /* 模擬輸入框 */
+        .mock-input {
+            border: 1px solid #ced4da;
+            border-radius: 3px;
+            padding: 4px 8px;
+            width: 60px;
+            text-align: center;
+            font-size: 10pt;
+        }
+
+        /* 模擬複選框 */
+        .mock-checkbox {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #667eea;
+            border-radius: 3px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+
+        .mock-checkbox.checked {
+            background: #667eea;
+        }
+
+        /* 步驟流程 */
+        .step-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 25px 0;
+        }
+
+        .step {
+            background: #667eea;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .step-arrow {
+            font-size: 24pt;
+            color: #667eea;
+            margin: 0 15px;
+        }
+
+        /* 流程圖 */
+        .flowchart {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .flowchart-node {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 12px 20px;
+            text-align: center;
+            margin: 10px auto;
+            max-width: 250px;
+        }
+
+        .flowchart-node.start {
+            background: #667eea;
+            color: white;
+            border-radius: 25px;
+        }
+
+        .flowchart-node.decision {
+            background: #fff3cd;
+            border-color: #ffc107;
+            transform: rotate(0deg);
+        }
+
+        .flowchart-arrow {
+            text-align: center;
+            color: #667eea;
+            font-size: 20pt;
+            margin: 5px 0;
+        }
+
+        /* 計算範例區域 */
+        .calculation-example {
+            background: #f0f4ff;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .calculation-title {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 14pt;
+        }
+
+        .calculation-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #ddd;
+        }
+
+        .calculation-row:last-child {
+            border-bottom: none;
+        }
+
+        .calculation-result {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14pt;
+            margin-top: 15px;
+        }
+
+        /* 頁腳 */
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #667eea;
+            text-align: center;
+            color: #666;
+            font-size: 10pt;
+        }
+
+        /* 分隔線 */
+        hr {
+            border: none;
+            border-top: 1px solid #ddd;
+            margin: 30px 0;
+        }
+
+        /* 索引標籤 */
+        .index-tag {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 9pt;
+            margin-right: 5px;
+        }
+
+        /* 兩欄佈局 */
+        .two-columns {
+            display: flex;
+            gap: 30px;
+            margin: 20px 0;
+        }
+
+        .column {
+            flex: 1;
+        }
+
+        /* 標籤雲 */
+        .tag-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .tag {
+            background: #e8f4ff;
+            color: #667eea;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 10pt;
+        }
+
+        /* 列印按鈕 */
+        .print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14pt;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .print-btn:hover {
+            background: #5a6fd6;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        /* 頁碼 */
+        .page-number {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: #999;
+            font-size: 10pt;
+        }
+
+        /* 垂直分隔線 */
+        .divider {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(to right, transparent, #667eea, transparent);
+            margin: 30px 0;
+        }
+
+        /* 對照表樣式 */
+        .matrix-preview {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .matrix-card {
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .matrix-header {
+            background: #667eea;
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .matrix-content {
+            padding: 15px;
+        }
+
+        /* 工具提示 */
+        .tooltip {
+            position: relative;
+            cursor: help;
+            border-bottom: 1px dashed #667eea;
+        }
+
+        .tooltip:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 10pt;
+            white-space: nowrap;
+            z-index: 100;
+        }
+
+        /* 鍵盤按鍵樣式 */
+        kbd {
+            background: #667eea;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+    </style>
+</head>
+<body>
+    <!-- 列印按鈕 -->
+    <button class="print-btn no-print" onclick="window.print()">
+        🖨️ 列印為 PDF
+    </button>
+
+    <!-- 頁碼 -->
+    <div class="page-number no-print">Page __PAGENO__</div>
+
+    <div class="container">
+        <!-- 標題 -->
+        <h1 id="title">
+            🧮 New SKU Safety Stock Calculator<br>
+            <span style="font-size: 18pt; color: #666;">新產品安全（緩衝）庫存計算器 使用說明書</span>
+        </h1>
+
+        <!-- 版本資訊 -->
+        <p style="text-align: center; color: #888; margin-bottom: 30px;">
+            版本 v1.2 | 更新日期：2026年2月
+        </p>
+
+        <!-- 目錄 -->
+        <div class="toc">
+            <h2>📋 目錄</h2>
+            <ul style="columns: 2; column-gap: 40px;">
+                <li><a href="#section1">1. 程式簡介</a></li>
+                <li><a href="#section2">2. 系統需求與安裝</a></li>
+                <li><a href="#section3">3. 介面導覽</a></li>
+                <li><a href="#section4">4. 基本操作流程</a></li>
+                <li><a href="#section5">5. 進階功能</a></li>
+                <li><a href="#section6">6. 權重計算系統</a></li>
+                <li><a href="#section7">7. 匯入與匯出</a></li>
+                <li><a href="#section8">8. 常見問題</a></li>
+                <li><a href="#section9">9. 計算公式說明</a></li>
+            </ul>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- 第1章：程式簡介 -->
+        <section id="section1">
+            <h2><span class="index-tag">1</span>程式簡介</h2>
+            
+            <h3>1.1 什麼是 Safety Stock 計算器？</h3>
+            <p>
+                <strong>Safety Stock（安全庫存）計算器</strong>是一個專為零售業設計的網頁工具，
+                幫助您根據店鋪的不同特性（區域、舖類、貨場面積）來計算每間店鋪所需的
+                <span class="tooltip" data-tip="為防止缺貨而預留的額外庫存">安全庫存</span>數量。
+            </p>
+
+            <h3>1.2 主要功能一覽</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">功能</th>
+                        <th style="width: 80%;">說明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>🏪 <strong>店鋪管理</strong></td>
+                        <td>支援無限數量的店鋪，可按多種條件篩選</td>
+                    </tr>
+                    <tr>
+                        <td>📊 <strong>安全庫存計算</strong></td>
+                        <td>根據對照表或權重自動計算每店所需庫存</td>
+                    </tr>
+                    <tr>
+                        <td>⚙️ <strong>權重計算</strong></td>
+                        <td>支援自訂權重參數，快速產生計算矩陣</td>
+                    </tr>
+                    <tr>
+                        <td>🎨 <strong>主題切換</strong></td>
+                        <td>多種配色主題可選擇</td>
+                    </tr>
+                    <tr>
+                        <td>📥 <strong>資料匯出</strong></td>
+                        <td>支援 CSV、Excel、JSON 格式匯出</td>
+                    </tr>
+                    <tr>
+                        <td>💾 <strong>本地儲存</strong></td>
+                        <td>瀏覽器自動保存設定，離線可用</td>
+                    </tr>
+                    <tr>
+                        <td>👤 <strong>OM 管理</strong></td>
+                        <td>可按營運經理分組檢視和管理店鋪</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>1.3 程式架構</h3>
+            <pre>New SKU Safety Stock Calculator/
+├── index.html      # 主頁面與 UI 骨架
+├── styles.css      # 樣式表（支援多種主題）
+├── app.js          # 應用程式邏輯
+├── config.js       # 業務資料與參數配置
+└── stores-template.csv  # 店鋪批量匯入模板</pre>
+
+            <div class="success-box">
+                <strong>💡 小提示：</strong>這是一個<strong>純前端應用程式</strong>，無需後端伺服器，
+                所有計算都在您的瀏覽器中完成，資料安全無虞。
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- 第2章：系統需求與安裝 -->
+        <section id="section2">
+            <h2><span class="index-tag">2</span>系統需求與安裝</h2>
+
+            <h3>2.1 系統需求</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">項目</th>
+                        <th style="width: 70%;">最低需求</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>瀏覽器</td>
+                        <td>Chrome 60+ / Firefox 60+ / Safari 12+ / Edge 79+</td>
+                    </tr>
+                    <tr>
+                        <td>網路</td>
+                        <td>首次載入需要網路（用於 SheetJS 庫）</td>
+                    </tr>
+                    <tr>
+                        <td>硬碟空間</td>
+                        <td>約 500 KB</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>2.2 安裝方式</h3>
+
+            <h4>方法一：直接開啟（最簡單）</h4>
+            <pre># Windows
+在檔案總管中找到 index.html，雙擊用瀏覽器開啟
+
+# macOS
+open index.html
+
+# Linux
+xdg-open index.html</pre>
+
+            <h4>方法二：使用本地伺服器（推薦）</h4>
+            <pre># 使用 Python（需安裝 Python 3）
+cd /path/to/calculator
+python -m http.server 8000
+
+# 使用 Node.js（需安裝 Node.js）
+cd /path/to/calculator
+npx http-server -p 8000
+
+# 使用 PHP
+cd /path/to/calculator
+php -S localhost:8000</pre>
+
+            <div class="tip-box">
+                <strong>🌐 開啟網址：</strong>http://localhost:8000
+            </div>
+
+            <div class="warning-box">
+                <strong>⚠️ 注意：</strong>使用本地伺服器可獲得最佳體驗，
+                避免瀏覽器的跨域安全限制。
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- 第3章：介面導覽 -->
+        <section id="section3">
+            <h2><span class="index-tag">3</span>介面導覽</h2>
+
+            <h3>3.1 主介面結構</h3>
+            
+            <div class="interface-screenshot">
+                <div class="interface-title">📸 主介面截圖（結構示意圖）</div>
+                
+                <div class="mock-ui">
+                    <div class="mock-header">🧮 New SKU Safety (Buffer) Stock Calculator - 新產品安全（緩衝）庫存計算器</div>
+                    
+                    <div class="mock-content">
+                        <!-- 對照表區域 -->
+                        <div class="mock-section">
+                            <div class="mock-section-title">📋 Safety Stock 對照表</div>
+                            <div class="mock-section-content">
+                                <div class="matrix-preview">
+                                    <div class="matrix-card">
+                                        <div class="matrix-header">🇭🇰 香港 (HK)</div>
+                                        <div class="matrix-content">
+                                            <table class="mock-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Class\Size</th>
+                                                        <th>XL</th>
+                                                        <th>L</th>
+                                                        <th>M</th>
+                                                        <th>S</th>
+                                                        <th>XS</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr><td>A級</td><td>8</td><td>6</td><td>5</td><td>4</td><td>3</td></tr>
+                                                    <tr><td>B級</td><td>6</td><td>5</td><td>4</td><td>3</td><td>2</td></tr>
+                                                    <tr><td>C級</td><td>5</td><td>4</td><td>3</td><td>2</td><td>2</td></tr>
+                                                    <tr><td>D級</td><td>4</td><td>3</td><td>2</td><td>2</td><td>1</td></tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="matrix-card">
+                                        <div class="matrix-header">🇲🇴 澳門 (MO)</div>
+                                        <div class="matrix-content">
+                                            <table class="mock-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Class\Size</th>
+                                                        <th>XL</th>
+                                                        <th>L</th>
+                                                        <th>M</th>
+                                                        <th>S</th>
+                                                        <th>XS</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr><td>A級</td><td>10</td><td>8</td><td>6</td><td>5</td><td>4</td></tr>
+                                                    <tr><td>B級</td><td>8</td><td>6</td><td>5</td><td>4</td><td>3</td></tr>
+                                                    <tr><td>C級</td><td>6</td><td>5</td><td>4</td><td>3</td><td>2</td></tr>
+                                                    <tr><td>D級</td><td>5</td><td>4</td><td>3</td><td>2</td><td>2</td></tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="text-align: center; margin-top: 10px;">
+                                    <span class="mock-btn mock-btn-warning">編輯對照表</span>
+                                    <span class="mock-btn mock-btn-success">套用到選擇店鋪</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 店鋪選擇區域 -->
+                        <div class="mock-section">
+                            <div class="mock-section-title">📍 選擇店鋪</div>
+                            <div class="mock-section-content">
+                                <div style="margin-bottom: 10px;">
+                                    <span class="mock-btn mock-btn-primary">全選</span>
+                                    <span class="mock-btn mock-btn-secondary">取消全選</span>
+                                    <span class="mock-btn mock-btn-secondary">反向選擇</span>
+                                    <span class="mock-btn mock-btn-secondary">取消篩選</span>
+                                    <span style="margin-left: 15px; color: #666;">顯示 84 間 / 已選 0 間</span>
+                                </div>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <span style="font-weight: bold;">按區域：</span>
+                                    <span class="mock-btn mock-btn-primary">🇭🇰 HK</span>
+                                    <span class="mock-btn mock-btn-primary">🇲🇴 MO</span>
+                                </div>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px;">
+                                    <span style="font-weight: bold;">按舖類：</span>
+                                    <span class="mock-btn mock-btn-primary">A級</span>
+                                    <span class="mock-btn mock-btn-primary">B級</span>
+                                    <span class="mock-btn mock-btn-primary">C級</span>
+                                    <span class="mock-btn mock-btn-primary">D級</span>
+                                </div>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px;">
+                                    <span style="font-weight: bold;">按OM：</span>
+                                    <span class="mock-btn mock-btn-primary">Candy</span>
+                                    <span class="mock-btn mock-btn-primary">Eva</span>
+                                    <span class="mock-btn mock-btn-primary">Hippo</span>
+                                    <span class="mock-btn mock-btn-primary">Ivy</span>
+                                    <span class="mock-btn mock-btn-primary">Queenie</span>
+                                    <span class="mock-btn mock-btn-primary">Violet</span>
+                                    <span class="mock-btn mock-btn-primary">Windy</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 計算結果區域 -->
+                        <div class="mock-section">
+                            <div class="mock-section-title">📊 計算結果</div>
+                            <div class="mock-section-content">
+                                <div style="margin-bottom: 10px;">
+                                    <span class="mock">🔢 -btn mock-btn-success計算 Safety Stock</span>
+                                    <span class="mock-btn mock-btn-primary">📥 匯出 CSV</span>
+                                    <span class="mock-btn mock-btn-primary">📊 匯出 Excel</span>
+                                    <span class="mock-btn mock-btn-primary">💾 匯出配置</span>
+                                </div>
+                                <table class="mock-table">
+                                    <thead>
+                                        <tr>
+                                            <th>HK/MO</th>
+                                            <th>舖類</th>
+                                            <th>面積</th>
+                                            <th>代碼</th>
+                                            <th>店數</th>
+                                            <th>SS</th>
+                                            <th>小計</th>
+                                            <th>Carry</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td>🇭🇰 香港</td><td><span style="background:#ff6b6b;color:white;padding:2px 6px;border-radius:3px;">A</span></td><td>XL</td><td><strong>HKAXL</strong></td><td>5</td><td>8</td><td>40</td><td>Y</td></tr>
+                                        <tr><td>🇭🇰 香港</td><td><span style="background:#ff6b6b;color:white;padding:2px 6px;border-radius:3px;">A</span></td><td>L</td><td><strong>HKAL</strong></td><td>12</td><td>6</td><td>72</td><td>Y</td></tr>
+                                        <tr><td>🇭🇰 香港</td><td><span style="background:#ff6b6b;color:white;padding:2px 6px;border-radius:3px;">A</span></td><td>M</td><td><strong>HKAM</strong></td><td>8</td><td>5</td><td>40</td><td>Y</td></tr>
+                                        <tr><td style="background: #ffeb3b;" colspan="3"><strong>TOTAL:</strong></td><td style="background: #ffeb3b;"></td><td style="background: #ffeb3b;"><strong>97</strong></td><td style="background: #ffeb3b;">SS:</td><td style="background: #ffeb3b;"><strong>856</strong></td><td style="background: #ffeb3b;"></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>3.2 店鋪類型代碼說明</h3>
+            <p>店鋪類型代碼由三部分組成：<code style="background: #667eea; color: white; padding: 3px 8px; border-radius: 4px;">區域 + 舖類 + 面積</code></p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>代碼</th>
+                        <th>區域</th>
+                        <th>舖類</th>
+                        <th>貨場面積</th>
+                        <th>範例店鋪</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>HKAXL</strong></td>
+                        <td>🇭🇰 香港</td>
+                        <td><span style="background:#ff6b6b;color:white;padding:2px 6px;border-radius:3px;">A 級</span></td>
+                        <td>XL（特大）</td>
+                        <td>銅鑼灣旗艦店</td>
+                    </tr>
+                    <tr>
+                        <td><strong>HKAL</strong></td>
+                        <td>🇭🇰 香港</td>
+                        <td><span style="background:#ff6b6b;color:white;padding:2px 6px;border-radius:3px;">A 級</span></td>
+                        <td>L（大）</td>
+                        <td>中環店</td>
+                    </tr>
+                    <tr>
+                        <td><strong>HKAM</strong></td>
+                        <td>🇭🇰 香港</td>
+                        <td><span style="background:#ff6b6b;color:white;padding:2px 6px;border-radius:3px;">A 級</span></td>
+                        <td>M（中）</td>
+                        <td>旺角店</td>
+                    </tr>
+                    <tr>
+                        <td><strong>MOAD</strong></td>
+                        <td>🇲🇴 澳門</td>
+                        <td><span style="background:#ff6b6b;color:white;padding:2px 6px;border-radius:3px;">A 級</span></td>
+                        <td>D</td>
+                        <td>澳門半島店</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>3.3 店鋪等級說明</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>等級</th>
+                        <th>說明</th>
+                        <th>權重預設值</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span style="background:#ff6b6b;color:white;padding:4px 12px;border-radius:15px;">A 級</span></td>
+                        <td>優先級最高（核心店鋪、高銷售量）</td>
+                        <td>3</td>
+                    </tr>
+                    <tr>
+                        <td><span style="background:#ffa94d;color:white;padding:4px 12px;border-radius:15px;">B 級</span></td>
+                        <td>優先級較高</td>
+                        <td>2</td>
+                    </tr>
+                    <tr>
+                        <td><span style="background:#69db7c;color:white;padding:4px 12px;border-radius:15px;">C 級</span></td>
+                        <td>優先級中等</td>
+                        <td>1.5</td>
+                    </tr>
+                    <tr>
+                        <td><span style="background:#74c0fc;color:white;padding:4px 12px;border-radius:15px;">D 級</span></td>
+                        <td>優先級最低</td>
+                        <td>1.5</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>3.4 貨場面積說明</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>代碼</th>
+                        <th>說明</th>
+                        <th>面積範圍</th>
+                        <th>權重預設值</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>XL</strong></td>
+                        <td>超大型</td>
+                        <td>>500㎡</td>
+                        <td>4</td>
+                    </tr>
+                    <tr>
+                        <td><strong>L</strong></td>
+                        <td>大型</td>
+                        <td>200-500㎡</td>
+                        <td>3</td>
+                    </tr>
+                    <tr>
+                        <td><strong>M</strong></td>
+                        <td>中型</td>
+                        <td>100-200㎡</td>
+                        <td>2.5</td>
+                    </tr>
+                    <tr>
+                        <td><strong>S</strong></td>
+                        <td>小型</td>
+                        <td>50-100㎡</td>
+                        <td>2</td>
+                    </tr>
+                    <tr>
+                        <td><strong>XS</strong></td>
+                        <td>超小型</td>
+                        <td><50㎡</td>
+                        <td>1.5</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- 第4章：基本操作流程 -->
+        <section id="section4">
+            <h2><span class="index-tag">4</span>基本操作流程</h2>
+
+            <h3>4.1 快速開始指南</h3>
+            
+            <div class="step-flow">
+                <div class="step">步驟 1<br>選擇店鋪</div>
+                <div class="step-arrow">→</div>
+                <div class="step">步驟 2<br>設定參數</div>
+                <div class="step-arrow">→</div>
+                <div class="step">步驟 3<br>計算結果</div>
+                <div class="step-arrow">→</div>
+                <div class="step">步驟 4<br>查看結果</div>
+                <div class="step-arrow">→</div>
+                <div class="step">步驟 5<br>匯出資料</div>
+            </div>
+
+            <h3>4.2 選擇店鋪</h3>
+
+            <h4>方法一：手動勾選</h4>
+            <ol>
+                <li>在店鋪列表中找到您要選擇的店鋪</li>
+                <li>點擊店鋪名稱前面的核取方塊</li>
+                <li>已選擇的店鋪會顯示為藍色背景</li>
+            </ol>
+
+            <h4>方法二：使用快捷按鈕</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>按鈕</th>
+                        <th>功能</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="mock-btn mock-btn-primary">全選</span></td>
+                        <td>選擇所有顯示的店鋪</td>
+                    </tr>
+                    <tr>
+                        <td><span class="mock-btn mock-btn-secondary">取消全選</span></td>
+                        <td>取消選擇所有店鋪</td>
+                    </tr>
+                    <tr>
+                        <td><span class="mock-btn mock-btn-secondary">反向選擇</span></td>
+                        <td>反轉目前的選擇狀態</td>
+                    </tr>
+                    <tr>
+                        <td><span class="mock-btn mock-btn-secondary">取消篩選</span></td>
+                        <td>清除所有篩選條件</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4>方法三：使用篩選器</h4>
+            <p>您可以結合多個篩選條件來精準選擇店鋪：</p>
+
+            <div class="flowchart">
+                <div style="text-align: center;">
+                    <div class="flowchart-node start">開始篩選</div>
+                    <div class="flowchart-arrow">↓</div>
+                    <div class="flowchart-node">選擇篩選條件</div>
+                    <div class="flowchart-arrow">↓</div>
+                    <div class="flowchart-node decision">是否選擇區域?</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                    <div style="text-align: center; flex: 1;">
+                        <div style="color: #28a745;">是</div>
+                        <div class="flowchart-arrow">→</div>
+                        <div class="flowchart-node">🇭🇰 HK / 🇲🇴 MO</div>
+                    </div>
+                    <div style="text-align: center; flex: 1;">
+                        <div style="color: #dc3545;">否</div>
+                        <div class="flowchart-arrow">→</div>
+                        <div class="flowchart-node decision">是否選擇舖類?</div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <div class="flowchart-node">顯示符合條件的店鋪</div>
+                </div>
+            </div>
+
+            <div class="calculation-example">
+                <div class="calculation-title">📝 篩選範例</div>
+                <div style="background: white; padding: 15px; border-radius: 6px;">
+                    <p><strong>範例 1：選擇所有香港 A 級店鋪</strong></p>
+                    <p>→ 按區域：🇭🇰 HK</p>
+                    <p>→ 按舖類：A級</p>
+                    <p style="color: #28a745;">✓ 結果：顯示所有香港 A 級店鋪</p>
+                    
+                    <div style="margin: 15px 0; border-top: 1px dashed #ddd;"></div>
+                    
+                    <p><strong>範例 2：選擇特定 OM 負責的店鋪</strong></p>
+                    <p>→ 按營運經理：Candy</p>
+                    <p style="color: #28a745;">✓ 右側面板顯示 Candy 負責的所有店鋪</p>
+                </div>
+            </div>
+
+            <h3>4.3 調整 Safety Stock 參數</h3>
+
+            <h4>方式一：直接編輯對照表</h4>
+            <ol>
+                <li>點擊 <span class="mock-btn mock-btn-warning">編輯對照表</span> 按鈕</li>
+                <li>點擊要修改的儲存格</li>
+                <li>輸入新數值</li>
+                <li>點擊 <span class="mock-btn mock-btn-success">保存</span></li>
+                <li>點擊 <span class="mock-btn mock-btn-success">套用到選擇店鋪</span></li>
+            </ol>
+
+            <h4>方式二：使用權重計算</h4>
+            <p>（詳細說明請參閱第 6 節）</p>
+
+            <h3>4.4 執行計算</h3>
+            <ol>
+                <li>確認已選擇至少一間店鋪</li>
+                <li>點擊 <span class="mock-btn mock-btn-success" style="font-size: 14pt; padding: 10px 20px;">🔢 計算 Safety Stock</span></li>
+                <li>系統會顯示計算結果</li>
+            </ol>
+
+            <h3>4.5 查看結果</h3>
+            <p>計算完成後，結果區域會顯示三個表格：</p>
+
+            <h4>📊 按店鋪類型彙總表</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>欄位</th>
+                        <th>說明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>HK/MO</td><td>區域</td></tr>
+                    <tr><td>舖類</td><td>A/B/C/D 級別</td></tr>
+                    <tr><td>貨場面積</td><td>XL/L/M/S/XS</td></tr>
+                    <tr><td>類型代碼</td><td>店鋪類型代碼</td></tr>
+                    <tr><td>店鋪數量</td><td>該類型的店鋪數量</td></tr>
+                    <tr><td>Safety Stock</td><td>每間店鋪的安全庫存量</td></tr>
+                    <tr><td>ALL SHOP QTY</td><td>該類型所有店鋪的總庫存量</td></tr>
+                    <tr><td>Carry</td><td>Y = 需要備貨 / FALSE = 不需要備貨</td></tr>
+                </tbody>
+            </table>
+
+            <h4>👤 按營運經理 (OM) 彙總表</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>欄位</th>
+                        <th>說明</th>
+                    </thead>
+                <tbody>
+                    <tr><td </tr>
+               >營運經理</td><td>OM 姓名</td></tr>
+                    <tr><td>區域分佈</td><td>香港/澳門店鋪數量</td></tr>
+                    <tr><td>店鋪數量</td><td>該 OM 負責的店鋪數量</td></tr>
+                    <tr><td>平均 SS</td><td>平均 Safety Stock</td></tr>
+                    <tr><td>SS 總計</td><td>該 OM 負責店鋪的 Safety Stock 總和</td></tr>
+                    <tr><td>佔比</td><td>佔整體的比例</td></tr>
+                    <tr><td>Carry</td><td>需要備貨的店鋪數量</td></tr>
+                </tbody>
+            </table>
+
+            <h4>📋 店鋪詳細清單</h4>
+            <p>顯示所有選擇店鋪的詳細資料。</p>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- 第5章：進階功能 -->
+        <section id="section5">
+            <h2><span class="index-tag">5</span>進階功能</h2>
+
+            <h3>5.1 個別店鋪編輯</h3>
+            <p>您可以對單一店鋪的 Safety Stock 值進行獨立編輯：</p>
+            
+            <div class="calculation-example">
+                <div class="calculation-title">📝 編輯步驟</div>
+                <div style="background: white; padding: 15px; border-radius: 6px;">
+                    <p>1. 在店鋪列表中找到目標店鋪</p>
+                    <p>2. 點擊 <span style="background: #667eea; color: white; padding: 4px 12px; border-radius: 4px;">Safety Stock</span> 欄位</p>
+                    <p>3. 直接輸入新數值</p>
+                    <p>4. 按 <kbd>Enter</kbd> 確認，或點擊其他位置自動保存</p>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>💡 小提示：</strong>個別店鋪的自訂值會覆蓋對照表的預設值。
+            </div>
+
+            <h3>5.2 主題切換</h3>
+            <p>程式支援多種配色主題，點擊右上角的 <span style="font-size: 16pt;">🎨</span> 按鈕選擇：</p>
+
+            <div class="tag-cloud">
+                <span class="tag">💄 莎莎粉（預設）</span>
+                <span class="tag">🏢 企業標準</span>
+                <span class="tag">🌙 深色模式</span>
+                <span class="tag">🌅 暖色調</span>
+                <span class="tag">👁️ 高對比度</span>
+                <span class="tag">💜 優雅紫</span>
+                <span class="tag">◻️ 極簡白</span>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- 第6章：權重計算系統 -->
+        <section id="section6">
+            <h2><span class="index-tag">6</span>權重計算系統</h2>
+
+            <h3>6.1 什麼是權重計算？</h3>
+            <p>
+                權重計算系統讓您可以透過調整參數，自動產生符合業務需求的 Safety Stock 對照表，
+                而不需要手動輸入每個數值。
+            </p>
+
+            <h3>6.2 計算公式</h3>
+            
+            <div class="formula">
+                <div class="formula-title">Safety Stock 計算公式</div>
+                <div class="formula-content">
+                    SS = 基礎值 + (Class權重 × Size權重 × 區域係數)
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>公式說明：</strong>
+                <ul style="margin-top: 10px;">
+                    <li><strong>基礎值</strong>：所有店鋪的 Safety Stock 基礎數值（預設 4）</li>
+                    <li><strong>Class權重</strong>：根據舖類級別（A/B/C/D）設定的權重係數</li>
+                    <li><strong>Size權重</strong>：根據貨場面積（XL/L/M/S/XS）設定的權重係數</li>
+                    <li><strong>區域係數</strong>：香港(HK)通常為 1.0，澳門(MO)通常較高（如 1.33）</li>
+                </ul>
+            </div>
+
+            <h3>6.3 權重參數說明</h3>
+
+            <h4>Class 權重（A:B:C:D）</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>等級</th>
+                        <th>說明</th>
+                        <th>預設值</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><span style="background:#ff6b6b;color:white;padding:4px 12px;border-radius:15px;">A 級</span></td><td>核心店鋪</td><td>3</td></tr>
+                    <tr><td><span style="background:#ffa94d;color:white;padding:4px 12px;border-radius:15px;">B 級</span></td><td>高優先級</td><td>2</td></tr>
+                    <tr><td><span style="background:#69db7c;color:white;padding:4px 12px;border-radius:15px;">C 級</span></td><td>中優先級</td><td>1.5</td></tr>
+                    <tr><td><span style="background:#74c0fc;color:white;padding:4px 12px;border-radius:15px;">D 級</span></td><td>低優先級</td><td>1.5</td></tr>
+                </tbody>
+            </table>
+
+            <h4>Size 權重（XL:L:M:S:XS）</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>面積</th>
+                        <th>說明</th>
+                        <th>預設值</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>XL</strong></td><td>超大型</td><td>4</td></tr>
+                    <tr><td><strong>L</strong></td><td>大型</td><td>3</td></tr>
+                    <tr><td><strong>M</strong></td><td>中型</td><td>2.5</td></tr>
+                    <tr><td><strong>S</strong></td><td>小型</td><td>2</td></tr>
+                    <tr><td><strong>XS</strong></td><td>超小型</td><td>1.5</td></tr>
+                </tbody>
+            </table>
+
+            <h4>區域係數</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>區域</th>
+                        <th>說明</th>
+                        <th>預設值</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>HK</strong></td><td>香港</td><td>1.0</td></tr>
+                    <tr><td><strong>MO</strong></td><td>澳門</td><td>1.33</td></tr>
+                </tbody>
+            </table>
+
+            <h3>6.4 快速模板</h3>
+            <p>系統提供多種預設模板：</p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>模板名稱</th>
+                        <th>說明</th>
+                        <th>適用場景</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>預設權重</strong></td><td>標準配置</td><td>一般業務需求</td></tr>
+                    <tr><td><strong>平衡權重</strong></td><td>中等權重差異</td><td>追求平衡的策略</td></tr>
+                    <tr><td><strong>保守型</strong></td><td>較高的權重值</td><td>謹慎管理，降低缺貨風險</td></tr>
+                    <tr><td><strong>積極型</strong></td><td>較低的權重值</td><td>降低成本，減少庫存</td></tr>
+                </tbody>
+            </table>
+
+            <h3>6.5 使用權重計算的步驟</h3>
+            
+            <div class="step-flow">
+                <div class="step" style="font-size: 10pt;">點擊權重快速設定</div>
+                <div class="step-arrow">→</div>
+                <div class="step" style="font-size: 10pt;">調整權重參數</div>
+                <div class="step-arrow">→</div>
+                <div class="step" style="font-size: 10pt;">預覽結果</div>
+                <div class="step-arrow">→</div>
+                <div class="step" style="font-size: 10pt;">套用計算</div>
+            </div>
+
+            <ol>
+                <li>點擊 <span class="mock-btn mock-btn-secondary">⚙️ 權重快速設定</span> 展開面板</li>
+                <li>調整各項權重參數</li>
+                <li>（可選）選擇快速模板</li>
+                <li>點擊 <span class="mock-btn mock-btn-primary">👁️ 預覽結果</span> 查看計算結果</li>
+                <li>確認後點擊 <span class="mock-btn mock-btn-success">🚀 套用權重計算</span></li>
+                <li>點擊 <span class="mock-btn mock-btn-success">套用到選擇店鋪</span> 應用到店鋪</li>
+            </ol>
+
+            <h3>6.6 計算範例</h3>
+
+            <div class="calculation-example">
+                <div class="calculation-title">✅ 範例 1：正常計算</div>
+                <div style="background: white; padding: 15px; border-radius: 6px;">
+                    <div class="calculation-row">
+                        <span><strong>條件：</strong></span>
+                        <span>A級店鋪 (Class權重=3) + 大型貨場 (Size權重=3) + 澳門 (區域係數=1.33)</span>
+                    </div>
+                    <div class="calculation-row">
+                        <span><strong>計算：</strong></span>
+                        <span>4 + (3 × 3 × 1.33) = 4 + 11.97 ≈ <strong>16</strong></span>
+                    </div>
+                    <div class="calculation-result">Safety Stock = 16</div>
+                </div>
+            </div>
+
+            <div class="calculation-example">
+                <div class="calculation-title">⚠️ 範例 2：區域係數為 0</div>
+                <div style="background: white; padding: 15px; border-radius: 6px;">
+                    <div class="calculation-row">
+                        <span><strong>條件：</strong></span>
+                        <span>B級店鋪 (Class權重=2) + 中型貨場 (Size權重=1.5) + 某區域 (區域係數=0)</span>
+                    </div>
+                    <div class="calculation-row">
+                        <span><strong>計算：</strong></span>
+                        <span>4 + (2 × 1.5 × 0) = 4 + 0 = <strong>4</strong></span>
+                    </div>
+                    <div class="calculation-result">Safety Stock = 4</div>
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <strong>⚠️ 注意：</strong>當區域係數為 0 時，表示該區域不需要庫存。
+            </div>
+
+            <h3>6.7 目標總量調整</h3>
+            <p>如果您有特定的 Safety Stock 總量目標：</p>
+            <ol>
+                <li>在 <span class="mock-btn mock-btn-secondary">目標總 Safety</span> 輸入目標值（例如：1200）</li>
+                <li>系統會自動根據店鋪數量和權重比例分配</li>
+                <li>點擊 <span class="mock-btn mock-btn-primary">預覽結果</span> 查看分配結果</li>
+            </ol>
+
+            <h3>6.8 銷售目標計算功能</h3>
+            <p>
+                銷售目標計算功能讓您可以根據預期的銷售數量，自動計算所需的 Safety Stock 總量。
+                這對於新產品上市或規劃促銷活動時特別有用。
+            </p>
+
+            <h4>6.8.1 功能概述</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">元素</th>
+                        <th style="width: 75%;">說明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>📊 <strong>銷售目標數量</strong></td>
+                        <td>輸入預期的月銷售數量（例如：36,000 件）</td>
+                    </tr>
+                    <tr>
+                        <td>📅 <strong>Safety Stock Days</strong></td>
+                        <td>調整保障的庫存天數（1-30 天）</td>
+                    </tr>
+                    <tr>
+                        <td>🎯 <strong>目標總 Safety Stock</strong></td>
+                        <td>自動計算的 Safety Stock 目標值（只讀）</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4>6.8.2 計算公式</h4>
+            
+            <div class="formula">
+                <div class="formula-title">銷售目標驅動的 Safety Stock 計算公式</div>
+                <div class="formula-content">
+                    目標總 Safety Stock = 銷售目標數量 ÷ 30 × Safety Stock Days
+                </div>
+            </div>
+
+            <h4>6.8.3 使用步驟</h4>
+            <ol>
+                <li>展開 <span class="mock-btn mock-btn-secondary">⚙️ 權重快速設定</span> 面板</li>
+                <li>在 <strong>銷售目標數量</strong> 輸入框中輸入月銷售目標（例如：36000）</li>
+                <li>拖動 <strong>Safety Stock Days</strong> 滑塊調整庫存天數（預設 7 天）</li>
+                <li>系統會自動計算目標總 Safety Stock</li>
+                <li>點擊 <span class="mock-btn mock-btn-primary">👁️ 預覽結果</span> 查看計算結果</li>
+                <li>確認後點擊 <span class="mock-btn mock-btn-success">🚀 套用權重計算</span></li>
+            </ol>
+
+            <h4>6.8.4 介面示意圖</h4>
+            
+            <div class="interface-screenshot">
+                <div class="interface-title">📸 銷售目標計算區域示意圖</div>
+                
+                <div class="mock-ui">
+                    <div class="mock-content">
+                        <div class="mock-section" style="border: 2px solid #28a745; border-radius: 8px;">
+                            <div class="mock-section-title" style="background: #28a745; color: white;">
+                                📈 目標總量設定（銷售目標模式）
+                            </div>
+                            <div class="mock-section-content">
+                                <table style="font-size: 10pt;">
+                                    <tr>
+                                        <td style="width: 140px; padding: 8px;">
+                                            <label style="font-weight: bold; color: #28a745;">
+                                                📊 銷售目標數量：
+                                            </label>
+                                        </td>
+                                        <td style="padding: 8px;">
+                                            <input type="number" value="36000" style="
+                                                width: 150px;
+                                                padding: 8px 12px;
+                                                border: 2px solid #28a745;
+                                                border-radius: 6px;
+                                                font-size: 14pt;
+                                                font-weight: bold;
+                                                color: #28a745;
+                                            " />
+                                            <span style="color: #666; margin-left: 10px;">件 / 月</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 8px;">
+                                            <label style="font-weight: bold;">
+                                                📅 Safety Stock Days：
+                                            </label>
+                                        </td>
+                                        <td style="padding: 8px;">
+                                            <div style="display: flex; align-items: center; gap: 15px;">
+                                                <input type="range" min="1" max="30" value="7" style="
+                                                    width: 200px;
+                                                    height: 8px;
+                                                    -webkit-appearance: none;
+                                                    background: linear-gradient(to right, #ff6b6b, #ffa94d, #69db7c);
+                                                    border-radius: 4px;
+                                                " />
+                                                <span style="
+                                                    background: #28a745;
+                                                    color: white;
+                                                    padding: 4px 12px;
+                                                    border-radius: 15px;
+                                                    font-weight: bold;
+                                                    font-size: 14pt;
+                                                ">7 天</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr style="background: #f8f9fa;">
+                                        <td style="padding: 12px;">
+                                            <label style="font-weight: bold; color: #667eea;">
+                                                🎯 目標總 Safety：
+                                            </label>
+                                        </td>
+                                        <td style="padding: 12px;">
+                                            <input type="number" value="8400" readonly style="
+                                                width: 120px;
+                                                padding: 10px;
+                                                background: #f5f5f5;
+                                                border: 2px solid #667eea;
+                                                border-radius: 6px;
+                                                font-size: 16pt;
+                                                font-weight: bold;
+                                                color: #667eea;
+                                            " />
+                                            <span style="
+                                                background: #667eea;
+                                                color: white;
+                                                padding: 6px 12px;
+                                                border-radius: 4px;
+                                                margin-left: 10px;
+                                            ">
+                                                ⚡ 自動計算
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                                
+                                <div style="background: #d4edda; padding: 12px; border-radius: 6px; margin-top: 15px;">
+                                    <strong style="color: #28a745;">📝 計算說明：</strong>
+                                    <span style="color: #333;">36,000 ÷ 30 × 7 = <strong>8,400</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h4>6.8.5 計算範例</h4>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>範例</th>
+                        <th>銷售目標</th>
+                        <th>Safety Stock Days</th>
+                        <th>計算過程</th>
+                        <th>目標總 Safety Stock</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>標準情況</strong></td>
+                        <td>36,000 件</td>
+                        <td>7 天</td>
+                        <td>36,000 ÷ 30 × 7</td>
+                        <td style="color: #28a745; font-weight: bold;">8,400</td>
+                    </tr>
+                    <tr>
+                        <td><strong>增加保護期間</strong></td>
+                        <td>36,000 件</td>
+                        <td>14 天</td>
+                        <td>36,000 ÷ 30 × 14</td>
+                        <td style="color: #28a745; font-weight: bold;">16,800</td>
+                    </tr>
+                    <tr>
+                        <td><strong>減少保護期間</strong></td>
+                        <td>36,000 件</td>
+                        <td>3 天</td>
+                        <td>36,000 ÷ 30 × 3</td>
+                        <td style="color: #28a745; font-weight: bold;">3,600</td>
+                    </tr>
+                    <tr style="background: #f8f9fa;">
+                        <td><strong>手動模式</strong></td>
+                        <td>（未填）</td>
+                        <td>（不影響）</td>
+                        <td>使用者手動輸入</td>
+                        <td style="color: #667eea; font-weight: bold;">1,200（手動）</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="info-box">
+                <strong>💡 模式切換說明：</strong>
+                <ul style="margin-top: 10px;">
+                    <li><strong>銷售目標模式</strong>：輸入銷售目標後，目標總 Safety 輸入框變為只讀（灰色背景），值自動計算</li>
+                    <li><strong>手動模式</strong>：不輸入銷售目標時，目標總 Safety 輸入框可手動編輯</li>
+                    <li><strong>混合模式</strong>：可先使用自動計算，再手動調整最終值</li>
+                </ul>
+            </div>
+
+            <h4>6.8.6 與權重計算的整合</h4>
+            <p>當您點擊 <span class="mock-btn mock-btn-success">🚀 套用權重計算</span> 時，系統會：</p>
+            <ol>
+                <li>讀取已計算或手動輸入的「目標總 Safety Stock」</li>
+                <li>根據各類型店鋪的權重比例，自動分配庫存到對照表</li>
+                <li>使用 <code>scaleMatrixToTarget()</code> 函數將對照表縮放至目標值</li>
+            </ol>
+
+            <div class="calculation-example">
+                <div class="calculation-title">📝 整合計算範例</div>
+                <div style="background: white; padding: 15px; border-radius: 6px;">
+                    <p><strong>情境：</strong>月銷售目標 36,000 件，需要保護 7 天</p>
+                    <p>→ <strong>目標總 Safety Stock</strong> = 36,000 ÷ 30 × 7 = <strong>8,400</strong></p>
+                    <p>→ 系統根據店鋪權重分配：</p>
+                    <table style="font-size: 10pt; margin-top: 10px;">
+                        <thead>
+                            <tr>
+                                <th>店鋪類型</th>
+                                <th>權重比例</th>
+                                <th>分配庫存</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>HK A級 XL</td><td>25%</td><td>2,100</td></tr>
+                            <tr><td>HK A級 L</td><td>20%</td><td>1,680</td></tr>
+                            <tr><td>HK A級 M</td><td>15%</td><td>1,260</td></tr>
+                            <tr><td>其他類型</td><td>40%</td><td>3,360</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <h4>6.8.7 資料持久化</h4>
+            <p>銷售目標計算的參數會自動保存在瀏覽器中：</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>儲存項目</th>
+                        <th>localStorage 鍵值</th>
+                        <th>說明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>銷售目標數量</td>
+                        <td><code>salesTarget</code></td>
+                        <td>月銷售目標數量</td>
+                    </tr>
+                    <tr>
+                        <td>Safety Stock 天數</td>
+                        <td><code>safetyStockDays</code></td>
+                        <td>庫存保護天數（1-30）</td>
+                    </tr>
+                    <tr>
+                        <td>目標總 Safety</td>
+                        <td><code>targetTotal</code></td>
+                        <td>計算或手動輸入的目標值</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="success-box">
+                <strong>💡 小提示：</strong>刷新頁面後，您的設定會自動恢復，無需重新輸入。
+            </div>
+        </section>
+
+        <div class="page-break"></div>
+
+        <!-- 第7章：匯入與匯出 -->
+        <section id="section7">
+            <h2><span class="index-tag">7</span>匯入與匯出</h2>
+
+            <h3>7.1 匯出計算結果</h3>
+
+            <h4>匯出 CSV</h4>
+            <ol>
+                <li>完成計算後，點擊 <span class="mock-btn mock-btn-primary">📥 匯出 CSV</span></li>
+                <li>檔案會自動下載到您的電腦</li>
+                <li>可用 Excel 或其他試算表軟體打開</li>
+            </ol>
+
+            <h4>匯出 Excel</h4>
+            <ol>
+                <li>點擊 <span class="mock-btn mock-btn-primary">📊 匯出 Excel</span></li>
+                <li>會產生包含多個工作表的 Excel 檔案：</li>
+            </ol>
+
+            <table>
+                <thead>
+                    <tr>工作表名>
+                        <th稱</th>
+                        <th>內容</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>店鋪詳細清單</td><td>所有店鋪的詳細資料</td></tr>
+                    <tr><td>彙總表</td><td>按類型彙總的計算結果</td></tr>
+                    <tr><td>OM彙總</td><td>按營運經理分組的統計</td></tr>
+                </tbody>
+            </table>
+
+            <h4>匯出配置（JSON）</h4>
+            <ol>
+                <li>點擊 <span class="mock-btn mock-btn-primary">💾 匯出配置</span></li>
+                <li>會保存目前的設定：</li>
+            </ol>
+
+            <ul>
+                <li>對照表自訂值</li>
+                <li>已選擇的店鋪</li>
+                <li>店鋪列表</li>
+                <li>權重設定</li>
+            </ul>
+
+            <h3>7.2 匯入配置</h3>
+            <ol>
+                <li>點擊 <span class="mock-btn mock-btn-primary">📤 匯入配置</span></li>
+                <li>選擇之前導出的 <code>.json</code> 檔案</li>
+                <li>系統會自動載入所有設定</li>
+            </ol>
+
+            <h3>7.3 匯出格式說明</h3>
+
+            <h4>CSV 格式範例：</h4>
+            <pre>店鋪詳細清單
+生成日期: 2026/02/03 15:30:00
+
+HK/MO,代號,店鋪,類型代碼,舖類,貨場面積,Safety Stock,Carry
+HK,HA01,銅鑼灣一號,HKAL,A,L,6,Y
+HK,HA02,銅鑼灣二號,HKAM,A,M,5,Y
+MO,MA01,澳門廣場,MOBM,B,M,7,Y</pre>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- 第8章：常見問題 -->
+        <section id="section8">
+            <h2><span class="index-tag">8</span>常見問題</h2>
+
+            <h3>Q1：為什麼看不到計算結果？</h3>
+            <p><strong>可能原因：</strong></p>
+            <ul>
+                <li>沒有選擇任何店鋪 → <span style="color: #28a745;">解決：勾選至少一間店鋪</span></li>
+                <li>參數值不正確 → <span style="color: #28a745;">解決：檢查所有參數值</span></li>
+                <li>瀏覽器緩存問題 → <span style="color: #28a745;">解決：按 F5 刷新頁面</span></li>
+            </ul>
+
+            <h3>Q2：如何重置為預設值？</h3>
+            <ol>
+                <li>點擊 <span class="mock-btn mock-btn-warning">編輯對照表</span></li>
+                <li>點擊 <span class="mock-btn mock-btn-danger">重置為預設</span></li>
+                <li>確認重置操作</li>
+            </ol>
+
+            <h3>Q3：資料會遺失嗎？</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>情況</th>
+                        <th>結果</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>✅ 正常關閉瀏覽器</td>
+                        <td>資料保存在 localStorage</td>
+                    </tr>
+                    <tr>
+                        <td>✅ 刷新頁面</td>
+                        <td>資料不會遺失</td>
+                    </tr>
+                    <tr style="color: #dc3545;">
+                        <td>⚠️ 清除瀏覽器快取</td>
+                        <td>資料會遺失</td>
+                    </tr>
+                    <tr style="color: #dc3545;">
+                        <td>⚠️ 更換瀏覽器</td>
+                        <td>資料不會同步</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="success-box">
+                <strong>💡 建議：</strong>定期匯出配置備份
+            </div>
+
+            <h3>Q4：如何在多台電腦上使用？</h3>
+            <ol>
+                <li><strong>手動同步</strong>：在一台電腦上匯出配置，在另一台電腦上匯入</li>
+                <li><strong>雲端同步</strong>：將整個專案資料夾放在雲端硬碟（Dropbox、OneDrive）</li>
+                <li><strong>版本控制</strong>：使用 Git 上傳到 GitHub</li>
+            </ol>
+
+            <h3>Q5：如何修改預設密碼？</h3>
+            <p>編輯 <code>app.js</code> 檔案，找到以下行：</p>
+            <pre>const ADMIN_PASSWORD = '0000'; // 預設密碼</pre>
+            <p>將 <code>'0000'</code> 改為您想要的密碼。</p>
+
+            <h3>Q6：權重計算結果不合理？</h3>
+            <ol>
+                <li>檢查各項權重值是否正確</li>
+                <li>嘗試使用「預設權重」模板</li>
+                <li>逐步調整參數並預覽結果</li>
+            </ol>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- 第9章：計算公式說明 -->
+        <section id="section9">
+            <h2><span class="index-tag">9</span>計算公式說明</h2>
+
+            <h3>9.1 Safety Stock 基本概念</h3>
+            <p>
+                <strong>Safety Stock（安全庫存）</strong>是為防止缺貨而預留的額外庫存，
+                其計算考量以下因素：
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>因素</th>
+                        <th>說明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>前置時間（Lead Time）</strong></td>
+                        <td>供應商交貨所需的天數</td>
+                    </tr>
+                    <tr>
+                        <td><strong>需求變異</strong></td>
+                        <td>需求的波動程度</td>
+                    </tr>
+                    <tr>
+                        <td><strong>服務水準</strong></td>
+                        <td>期望的庫存充足率</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>9.2 本程式的權重計算公式</h3>
+            
+            <div class="formula">
+                <div class="formula-title">Safety Stock 計算公式</div>
+                <div class="formula-content">
+                    SS = 基礎值 + (Class權重 × Size權重 × 區域係數)
+                </div>
+            </div>
+
+            <h4>公式說明：</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>參數</th>
+                        <th>說明</th>
+                        <th>範圍</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>基礎值</td>
+                        <td>最低庫存基準</td>
+                        <td>≥ 0</td>
+                    </tr>
+                    <tr>
+                        <td>Class權重</td>
+                        <td>店鋪等級係數</td>
+                        <td>0 - 5</td>
+                    </tr>
+                    <tr>
+                        <td>Size權重</td>
+                        <td>店鋪面積係數</td>
+                        <td>0 - 5</td>
+                    </tr>
+                    <tr>
+                        <td>區域係數</td>
+                        <td>區域調整係數</td>
+                        <td>0 - 2</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>9.3 計算示例表</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>區域</th>
+                        <th>舖類</th>
+                        <th>面積</th>
+                        <th>Class權重</th>
+                        <th>Size權重</th>
+                        <th>區域係數</th>
+                        <th>基礎值</th>
+                        <th>Safety Stock</th>
+                        <th>計算過程</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>HK</td>
+                        <td>A</td>
+                        <td>XL</td>
+                        <td>3</td>
+                        <td>4</td>
+                        <td>1.0</td>
+                        <td>4</td>
+                        <td><strong>16</strong></td>
+                        <td>4 + (3×4×1.0) = 16</td>
+                    </tr>
+                    <tr>
+                        <td>HK</td>
+                        <td>A</td>
+                        <td>L</td>
+                        <td>3</td>
+                        <td>3</td>
+                        <td>1.0</td>
+                        <td>4</td>
+                        <td><strong>13</strong></td>
+                        <td>4 + (3×3×1.0) = 13</td>
+                    </tr>
+                    <tr>
+                        <td>HK</td>
+                        <td>A</td>
+                        <td>M</td>
+                        <td>3</td>
+                        <td>2.5</td>
+                        <td>1.0</td>
+                        <td>4</td>
+                        <td><strong>12</strong></td>
+                        <td>4 + (3×2.5×1.0) = 11.5 ≈ 12</td>
+                    </tr>
+                    <tr>
+                        <td>HK</td>
+                        <td>B</td>
+                        <td>M</td>
+                        <td>2</td>
+                        <td>2.5</td>
+                        <td>1.0</td>
+                        <td>4</td>
+                        <td><strong>9</strong></td>
+                        <td>4 + (2×2.5×1.0) = 9</td>
+                    </tr>
+                    <tr>
+                        <td>MO</td>
+                        <td>A</td>
+                        <td>M</td>
+                        <td>3</td>
+                        <td>2.5</td>
+                        <td>1.33</td>
+                        <td>4</td>
+                        <td><strong>14</strong></td>
+                        <td>4 + (3×2.5×1.33) = 14</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>9.4 Carry 狀態判斷</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>條件</th>
+                        <th>Carry 狀態</th>
+                        <th>說明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="background: #d4edda;">
+                        <td>Safety Stock > 0</td>
+                        <td><strong>Y</strong></td>
+                        <td>需要備貨</td>
+                    </tr>
+                    <tr style="background: #f8d7da;">
+                        <td>Safety Stock = 0</td>
+                        <td><strong>FALSE</strong></td>
+                        <td>不需要備貨</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="divider"></div>
+
+            <!-- 附錄 -->
+            <h2>📎 附錄</h2>
+
+            <h3>鍵盤快速鍵</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>按鍵</th>
+                        <th>功能</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><kbd>Enter</kbd></td><td>確認編輯</td></tr>
+                    <tr><td><kbd>Esc</kbd></td><td>取消編輯</td></tr>
+                    <tr><td><kbd>Ctrl</kbd> + <kbd>S</kbd></td><td>匯出配置（需焦點在頁面）</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 頁腳 -->
+        <div class="footer">
+            <p><strong>New SKU Safety Stock Calculator v1.2</strong></p>
+            <p>© 2026 RP Team</p>
+            <p style="margin-top: 15px; font-size: 9pt; color: #999;">
+                本說明文件支援 PDF 列印，請使用瀏覽器的「列印」功能將其儲存為 PDF 檔案。
+            </p>
+        </div>
+    </div>
+</body>
+</html>
